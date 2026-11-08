@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-CC Desktop Switch - PyInstaller build configuration
+Junction - PyInstaller build configuration
 
 Usage:
     pyinstaller build.spec                          # folder build (fast startup)
@@ -8,8 +8,8 @@ Usage:
     set CCDS_CONSOLE=1 && pyinstaller build.spec    # show console while debugging
 
 Output:
-    dist/CC-Desktop-Switch/        <- folder build
-    dist/CC-Desktop-Switch.exe     <- single-file build (add --onefile)
+    dist/Junction/        <- folder build
+    dist/Junction.exe     <- single-file build (add --onefile)
 """
 
 import os
@@ -85,7 +85,7 @@ if ONEFILE:
         a.zipfiles,
         a.datas,
         [],
-        name="CC-Desktop-Switch",
+        name="Junction",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -107,7 +107,7 @@ else:
         a.scripts,
         [],
         exclude_binaries=True,
-        name="CC-Desktop-Switch",
+        name="Junction",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -131,5 +131,5 @@ else:
         strip=False,
         upx=True,
         upx_exclude=[],
-        name="CC-Desktop-Switch",
+        name="Junction",
     )

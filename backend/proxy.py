@@ -901,7 +901,7 @@ def _get_http_proxy() -> Optional[str]:
 
 def create_proxy_app() -> FastAPI:
     """Create the local proxy FastAPI application."""
-    app = FastAPI(title="CC Desktop Switch Proxy", version="1.0.27")
+    app = FastAPI(title="Junction Proxy", version="1.0.28")
 
     def upstream_error_status(result: dict) -> int:
         """Convert upstream errors into HTTP error status codes so Claude Desktop does not treat them as 200 OK."""

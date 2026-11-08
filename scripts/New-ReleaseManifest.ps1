@@ -57,7 +57,7 @@ function Get-OrCreateSigningKey {
         Write-Host "Created local release signing key: $privatePath"
     }
 
-    Copy-Item -LiteralPath $publicPath -Destination (Join-Path $ReleaseDir "CC-Desktop-Switch-release-public.pem") -Force
+    Copy-Item -LiteralPath $publicPath -Destination (Join-Path $ReleaseDir "Junction-release-public.pem") -Force
     return $privatePath
 }
 
@@ -102,15 +102,15 @@ function Get-PlatformForAsset {
     )
 
     if ($Name -in @(
-            "CC-Desktop-Switch-v$Version-Windows-x64.exe",
-            "CC-Desktop-Switch-v$Version-Windows-Portable.zip",
-            "CC-Desktop-Switch-v$Version-Windows-Setup.exe"
+            "Junction-v$Version-Windows-x64.exe",
+            "Junction-v$Version-Windows-Portable.zip",
+            "Junction-v$Version-Windows-Setup.exe"
         )) {
         return "windows-x64"
     }
 
     $escapedVersion = [regex]::Escape($Version)
-    if ($Name -match "^CC-Desktop-Switch-v$escapedVersion-macOS-(?<arch>[^.]+)\.(pkg|dmg)$") {
+    if ($Name -match "^Junction-v$escapedVersion-macOS-(?<arch>[^.]+)\.(pkg|dmg)$") {
         return "macos-$($Matches["arch"])"
     }
 
@@ -164,7 +164,7 @@ function Get-ReleaseNotes {
         return [string]::Copy($Notes)
     }
 
-    return "Release for CC Desktop Switch v$Version."
+    return "Release for Junction v$Version."
 }
 
 $root = Get-ProjectRoot
@@ -182,19 +182,27 @@ if (-not (Test-Path -LiteralPath $releaseDir)) {
     throw "Release staging directory not found: $releaseDir"
 }
 
-foreach ($pattern in @("*.sha256", "*.sig", "latest.json", "CC-Desktop-Switch-release-public.pem")) {
+foreach ($pattern in @(
+    "*.sha256",
+    "*.sig",
+    "latest.json",
+    "Junction-release-public.pem",
+    "CC-Desktop-Switch-release-public.pem",
+    "CC-Desktop-Switch-v*-Windows-*",
+    "CC-Desktop-Switch-v*-macOS-*"
+)) {
     Get-ChildItem -LiteralPath $releaseDir -File -Filter $pattern -ErrorAction SilentlyContinue |
         Remove-Item -Force
 }
 
 $requiredAssetNames = @(
-    "CC-Desktop-Switch-v$Version-Windows-x64.exe",
-    "CC-Desktop-Switch-v$Version-Windows-Portable.zip",
-    "CC-Desktop-Switch-v$Version-Windows-Setup.exe",
-    "CC-Desktop-Switch-v$Version-macOS-arm64.pkg",
-    "CC-Desktop-Switch-v$Version-macOS-arm64.dmg",
-    "CC-Desktop-Switch-v$Version-macOS-x64.pkg",
-    "CC-Desktop-Switch-v$Version-macOS-x64.dmg"
+    "Junction-v$Version-Windows-x64.exe",
+    "Junction-v$Version-Windows-Portable.zip",
+    "Junction-v$Version-Windows-Setup.exe",
+    "Junction-v$Version-macOS-arm64.pkg",
+    "Junction-v$Version-macOS-arm64.dmg",
+    "Junction-v$Version-macOS-x64.pkg",
+    "Junction-v$Version-macOS-x64.dmg"
 )
 
 foreach ($assetName in $requiredAssetNames) {
@@ -206,7 +214,7 @@ foreach ($assetName in $requiredAssetNames) {
 $privateKey = Get-OrCreateSigningKey -KeyDir $KeyDir -ReleaseDir $releaseDir
 $platforms = [ordered]@{}
 $assetFiles = Get-ChildItem -LiteralPath $releaseDir -File |
-    Where-Object { $_.Name -like "CC-Desktop-Switch-v$Version-*" } |
+    Where-Object { $_.Name -like "Junction-v$Version-*" } |
     Sort-Object Name
 
 foreach ($assetFile in $assetFiles) {
@@ -227,7 +235,7 @@ foreach ($platform in $RequiredPlatforms) {
 }
 
 $latest = [ordered]@{
-    name = "CC Desktop Switch"
+    name = "Junction"
     version = $Version
     pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     notes = Get-ReleaseNotes -Notes $Notes -NotesFile $NotesFile -Version $Version
@@ -236,7 +244,7 @@ $latest = [ordered]@{
     platforms = $platforms
     signature = [ordered]@{
         algorithm = "RSA-CSP-BLOB-SHA256"
-        public_key = "CC-Desktop-Switch-release-public.pem"
+        public_key = "Junction-release-public.pem"
         format = "base64 raw signature over file bytes"
     }
 }

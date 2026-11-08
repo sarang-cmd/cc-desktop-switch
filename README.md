@@ -1,8 +1,11 @@
-# CC Desktop Switch
+# Junction
 
 **Manage Claude Desktop providers and model routes from one local app.**
 
-CC Desktop Switch helps Windows and macOS users connect Claude Desktop to Anthropic-compatible and OpenAI-compatible API providers. Choose a provider, set the model routes you want, then apply the configuration to Claude Desktop.
+Product website: <https://sarang-cmd.github.io/cc-desktop-switch/>
+
+
+Junction helps Windows and macOS users connect Claude Desktop to Anthropic-compatible and OpenAI-compatible API providers. Choose a provider, set the model routes you want, then apply the configuration to Claude Desktop.
 
 The app includes 22 built-in provider presets, bundled provider logos, a model-routing patchboard, connection checks, and an optional local forwarding gateway. Logos are stored with the app and work offline; custom or unlisted providers keep a readable icon fallback. Your API keys and provider configuration are kept in your local app configuration. You supply and pay for your own provider access.
 
@@ -30,7 +33,7 @@ These genuine app screenshots were captured locally with sample configuration an
 - Import supported CC-Switch provider configurations.
 - Keep the app running in the Windows system tray or macOS menu bar while Claude Desktop uses the local gateway.
 
-CC Desktop Switch applies settings to the official Claude Desktop app. It is not a Claude Code provider manager and is not affiliated with Anthropic or any listed provider.
+Junction applies settings to the official Claude Desktop app. It is not a Claude Code provider manager and is not affiliated with Anthropic or any listed provider.
 
 ## Built-in providers
 
@@ -46,7 +49,7 @@ The Xiaomi MiMo Token Plan preset includes selectable regional clusters. You sti
 
 ## Download v1.0.27
 
-[Open the v1.0.27 release page](https://github.com/sarang-cmd/cc-desktop-switch/releases/tag/v1.0.27) to download an installer or portable package.
+[Open the latest release page](https://github.com/sarang-cmd/cc-desktop-switch/releases/latest) to download an installer or portable package. The currently published v1.0.27 assets retain their previous `CC-Desktop-Switch` filenames; Junction builds use the new product name.
 
 - **Windows x64 installer:** `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`
 - **Windows x64 portable:** `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`
@@ -59,14 +62,14 @@ Each release includes SHA-256 files, detached signatures, the release public key
 
 ## Get started
 
-1. Install and open CC Desktop Switch.
+1. Install and open Junction.
 2. Choose a preset or add a provider manually.
 3. Enter the API key issued by that provider.
 4. Review the model-routing patchboard and map the Claude Desktop slots you plan to use.
 5. Select **Apply to Claude Desktop**.
 6. Fully quit and restart Claude Desktop so it reloads the provider settings.
 
-Claude Desktop uses the local CC Desktop Switch gateway for configured third-party providers. Keep CC Desktop Switch running while you use those providers. Closing the main window leaves the app available from the system tray on Windows or the menu bar on macOS.
+Claude Desktop uses the local Junction gateway for configured third-party providers. Keep Junction running while you use those providers. Closing the main window leaves the app available from the system tray on Windows or the menu bar on macOS.
 
 The local admin UI uses port `18081` by default. The forwarding gateway uses port `18080`. Both can be changed in Settings. If the desktop window does not open, try `http://127.0.0.1:18081` while the app is running.
 
@@ -78,7 +81,7 @@ The app validates custom Claude route names and reports unmapped routes rather t
 
 ## Privacy and local data
 
-CC Desktop Switch has no account or cloud configuration sync. Provider settings and API keys are stored in the app's local configuration directory. The default is `~/.cc-desktop-switch`; set `CCDS_CONFIG_DIR` to use another directory. Local backups may also be created when configuration changes.
+Junction has no account or cloud configuration sync. Provider settings and API keys are stored in the app's local configuration directory. The default is `~/.cc-desktop-switch`; set `CCDS_CONFIG_DIR` to use another directory. Local backups may also be created when configuration changes.
 
 When you make a provider request, the app forwards it to the endpoint you configured. That provider's service and privacy terms govern the request after it leaves your computer. The app can also check GitHub Releases for update metadata using the configured update URL. Do not put real API keys in screenshots, issue reports, or shared diagnostic files.
 
@@ -92,7 +95,7 @@ Claude Desktop reads provider settings at startup. Fully quit Claude Desktop, in
 
 ### Claude Desktop cannot connect
 
-Confirm CC Desktop Switch is running. Check that the admin UI and gateway ports are available:
+Confirm Junction is running. Check that the admin UI and gateway ports are available:
 
 ```powershell
 netstat -ano | findstr :18081
@@ -103,7 +106,7 @@ Check the provider's base URL, API key, model ID, and API format. If you use an 
 
 ### Claude Desktop reports that it is managed by an organization
 
-On Windows, CC Desktop Switch writes marked policy values to configure third-party inference. A normal uninstall removes only policy values carrying the `ccds_managed=true` marker. It does not remove policy values owned by Windows, an organization, or another administrator. Use **Clear Desktop Config** before uninstalling older versions if necessary, then check with your administrator if the managed notice remains.
+On Windows, Junction writes marked policy values to configure third-party inference. A normal uninstall removes only policy values carrying the `ccds_managed=true` marker. It does not remove policy values owned by Windows, an organization, or another administrator. Use **Clear Desktop Config** before uninstalling older versions if necessary, then check with your administrator if the managed notice remains.
 
 ### Model or reasoning errors
 
@@ -148,4 +151,4 @@ The localization check verifies English and Simplified Chinese dictionary parity
 
 ## License and third-party services
 
-See [LICENSE.txt](LICENSE.txt) for the project license. CC Desktop Switch is not affiliated with Anthropic, Claude Desktop, CC-Switch, or any provider named in this README. Provider names and marks belong to their respective owners. Users are responsible for their own API usage and compliance with provider terms.
+See [LICENSE.txt](LICENSE.txt) for the project license. Junction is not affiliated with Anthropic, Claude Desktop, CC-Switch, or any provider named in this README. Provider names and marks belong to their respective owners. Users are responsible for their own API usage and compliance with provider terms.

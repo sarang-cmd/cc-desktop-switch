@@ -18,8 +18,8 @@ PY
 }
 
 VERSION="${1:-${CCDS_VERSION:-$(detect_version)}}"
-SOURCE_PATH="${2:-dist/mac/CC Desktop Switch.app}"
-OUTPUT_DMG="${3:-dist/mac/CC-Desktop-Switch-v${VERSION}-macOS.dmg}"
+SOURCE_PATH="${2:-dist/mac/Junction.app}"
+OUTPUT_DMG="${3:-dist/mac/Junction-v${VERSION}-macOS.dmg}"
 
 if [[ ! -e "$SOURCE_PATH" ]]; then
   echo "DMG source not found: $SOURCE_PATH" >&2
@@ -45,7 +45,7 @@ fi
 
 rm -f "$OUTPUT_DMG"
 hdiutil create \
-  -volname "CC Desktop Switch ${VERSION}" \
+  -volname "Junction ${VERSION}" \
   -srcfolder "$STAGING" \
   -ov \
   -format UDZO \

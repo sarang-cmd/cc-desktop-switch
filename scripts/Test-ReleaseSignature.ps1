@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$File,
     [string]$Signature,
-    [string]$PublicKey = "release/CC-Desktop-Switch-release-public.pem"
+    [string]$PublicKey = "release/Junction-release-public.pem"
 )
 
 $ErrorActionPreference = "Stop"

@@ -7,6 +7,15 @@
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+## v1.0.28
+
+Release notes: [docs/release-notes-v1.0.28.md](release-notes-v1.0.28.md)
+
+- Rebranded the desktop application, installer, release packaging, icon, and documentation as Junction.
+- Added a responsive landing page with direct links to the latest platform downloads and draft legal pages.
+- Pointed GitHub links and update checks at the `sarang-cmd/cc-desktop-switch` repository.
+- Preserved existing local configuration paths and Windows/macOS upgrade identities.
+
 ## v1.0.27
 
 Release notes: [docs/release-notes-v1.0.27.md](release-notes-v1.0.27.md)

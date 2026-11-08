@@ -1,6 +1,6 @@
-# CC Desktop Switch 使用说明
+# Junction 使用说明
 
-这份文档面向第一次使用的用户。目标很简单：在 CC Desktop Switch 里选一个 API 提供商，填自己的 API Key，然后一键让 Claude 桌面版使用这个供应商。
+这份文档面向第一次使用的用户。目标很简单：在 Junction 里选一个 API 提供商，填自己的 API Key，然后一键让 Claude 桌面版使用这个供应商。
 
 ## 适用场景
 
@@ -10,21 +10,21 @@
 
 ## 快速开始
 
-### 1. 启动 CC Desktop Switch
+### 1. 启动 Junction
 
 普通用户推荐下载 Release 里的安装版：
 
 ```text
-CC-Desktop-Switch-v<最新版本>-Windows-Setup.exe
+Junction-v<最新版本>-Windows-Setup.exe
 ```
 
 也可以使用便携版：
 
 ```text
-CC-Desktop-Switch-v<最新版本>-Windows-Portable.zip
+Junction-v<最新版本>-Windows-Portable.zip
 ```
 
-macOS 版本由 macOS 维护者单独同步。如果 Release 页面出现对应的 DMG 或 PKG，DMG 打开后把应用拖到“应用程序”；PKG 会安装到 `/Applications/CC Desktop Switch.app`，再次安装或安装新版本时会替换该位置的旧应用。
+macOS 版本由 macOS 维护者单独同步。如果 Release 页面出现对应的 DMG 或 PKG，DMG 打开后把应用拖到“应用程序”；PKG 会安装到 `/Applications/Junction.app`，再次安装或安装新版本时会替换该位置的旧应用。
 
 启动后会打开一个桌面窗口。浏览器地址只是备用入口：
 
@@ -32,7 +32,7 @@ macOS 版本由 macOS 维护者单独同步。如果 Release 页面出现对应�
 http://127.0.0.1:18081
 ```
 
-Windows 下如果 CC Desktop Switch 已经在运行，再次双击桌面快捷方式只会唤起已有窗口，不会再启动第二个实例。
+Windows 下如果 Junction 已经在运行，再次双击桌面快捷方式只会唤起已有窗口，不会再启动第二个实例。
 
 默认端口：
 
@@ -99,10 +99,10 @@ DeepSeek 还提供“DeepSeek Max 思维”选项。Claude 界面可能仍显示
 原理很直白：
 
 ```text
-Claude 桌面版 -> CC Desktop Switch 本机转发 -> 你的 API 提供商
+Claude 桌面版 -> Junction 本机转发 -> 你的 API 提供商
 ```
 
-因此使用第三方 provider 时，需要让 CC Desktop Switch 在后台运行。关闭窗口一般只是缩到托盘或隐藏窗口；如果从托盘、Dock 或系统菜单里完全退出，本机转发地址就无法继续响应。
+因此使用第三方 provider 时，需要让 Junction 在后台运行。关闭窗口一般只是缩到托盘或隐藏窗口；如果从托盘、Dock 或系统菜单里完全退出，本机转发地址就无法继续响应。
 
 本工具负责写入 Claude 桌面版需要的本机连接地址、网关 Key 和模型列表。只有显式映射的 Claude 模型槽位会显示到 Claude Desktop；`Default` 只保存在本工具内部，不作为模型菜单项。真实供应商 API Key 仍只保存在你的电脑上，不会上传到本项目或任何云端服务。
 
@@ -110,7 +110,7 @@ Claude 桌面版 -> CC Desktop Switch 本机转发 -> 你的 API 提供商
 
 应用完成后，关闭并重新打开 Claude Desktop。
 
-然后在 Claude Desktop 里发一条简单消息。如果失败，先核对 API Key、余额、模型名和 Claude Desktop 是否完整重启，再回到 CC Desktop Switch 的“代理”页面查看本机 gateway 日志。
+然后在 Claude Desktop 里发一条简单消息。如果失败，先核对 API Key、余额、模型名和 Claude Desktop 是否完整重启，再回到 Junction 的“代理”页面查看本机 gateway 日志。
 
 ## 常见问题
 
@@ -126,11 +126,11 @@ MIT License 是开源协议，不是代码签名证书。如果没有真实 Wind
 
 Release 会提供 `.sha256` 和 `.sig` 文件，用来校验下载文件没有被替换。但这不能替代 Windows 代码签名。
 
-### 为什么需要 CC Desktop Switch？
+### 为什么需要 Junction？
 
 因为 Claude 桌面版需要填写第三方推理配置，而不同 API 厂商的模型名和请求入口不一样。本工具负责保存配置、整理模型映射，并把当前供应商写入 Claude Desktop。
 
-### 能不能关闭 CC Desktop Switch？
+### 能不能关闭 Junction？
 
 不要完全退出。v1.0.18 默认让 Claude Desktop 连接本机转发服务，所以使用第三方 provider 时需要保持本工具在后台运行。Windows 可以关闭窗口让它留在系统托盘；macOS 可以关闭窗口让它隐藏到后台。
 

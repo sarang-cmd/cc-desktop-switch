@@ -23,8 +23,9 @@ def detect_app_version():
 
 
 APP_VERSION = detect_app_version()
-APP_NAME = "CC Desktop Switch"
-EXECUTABLE_NAME = "CC-Desktop-Switch"
+APP_NAME = "Junction"
+EXECUTABLE_NAME = "Junction"
+# Preserve the original bundle ID so macOS permissions and upgrade identity remain stable.
 BUNDLE_IDENTIFIER = os.environ.get("CCDS_MACOS_BUNDLE_ID", "io.github.lonr6.ccdesktopswitch")
 CODESIGN_IDENTITY = os.environ.get("MACOS_CODESIGN_IDENTITY") or None
 ENTITLEMENTS_FILE = MACOS_DIR / "entitlements.plist"

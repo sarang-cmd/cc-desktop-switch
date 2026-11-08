@@ -1,9 +1,9 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
-title CC Desktop Switch
+title Junction
 echo ========================================
-echo    CC Desktop Switch v1.0.27
+echo    Junction v1.0.28
 echo    Starting the admin console...
 echo ========================================
 

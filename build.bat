@@ -1,11 +1,11 @@
 @echo off
-title CC Desktop Switch - Build Tool
+title Junction - Build Tool
 chcp 65001 >nul
 
 :MENU
 cls
 echo ========================================
-echo    CC Desktop Switch v1.0.27 - Build Tool
+echo    Junction v1.0.28 - Build Tool
 echo ========================================
 echo.
 echo  Select a packaging mode:
@@ -54,9 +54,9 @@ if %errorlevel% neq 0 (
 echo  Dependencies installed
 
 REM Clean previous build output
-if exist dist\CC-Desktop-Switch rmdir /s /q dist\CC-Desktop-Switch >nul 2>&1
-if exist CC-Desktop-Switch.zip del CC-Desktop-Switch.zip >nul 2>&1
-if exist CC-Desktop-Switch-Setup-*.exe del CC-Desktop-Switch-Setup-*.exe >nul 2>&1
+if exist dist\Junction rmdir /s /q dist\Junction >nul 2>&1
+if exist Junction.zip del Junction.zip >nul 2>&1
+if exist Junction-Setup-*.exe del Junction-Setup-*.exe >nul 2>&1
 if exist build rmdir /s /q build >nul 2>&1
 
 REM Run PyInstaller
@@ -91,7 +91,7 @@ if "%MODE%"=="zip" (
     set CCDS_ONEFILE=
     python -m PyInstaller --noconfirm --clean build.spec >nul 2>&1
     if %errorlevel% equ 0 (
-        powershell Compress-Archive -Path "dist\CC-Desktop-Switch\*" -DestinationPath "CC-Desktop-Switch.zip" -Force >nul 2>&1
+        powershell Compress-Archive -Path "dist\Junction\*" -DestinationPath "Junction.zip" -Force >nul 2>&1
         echo  ZIP archive built successfully.
     ) else (
         echo [Error] Packaging failed.
@@ -142,12 +142,12 @@ echo [3/3] Done.
 echo ========================================
 echo.
 echo  Output:
-if "%MODE%"=="folder" echo    dist\CC-Desktop-Switch\
-if "%MODE%"=="onefile" echo    dist\CC-Desktop-Switch.exe
-if "%MODE%"=="zip" echo    CC-Desktop-Switch.zip
-if "%MODE%"=="installer" dir /b CC-Desktop-Switch-Setup-*.exe 2>nul
+if "%MODE%"=="folder" echo    dist\Junction\
+if "%MODE%"=="onefile" echo    dist\Junction.exe
+if "%MODE%"=="zip" echo    Junction.zip
+if "%MODE%"=="installer" dir /b Junction-Setup-*.exe 2>nul
 echo.
-echo  Launching the app opens the CC Desktop Switch desktop window.
+echo  Launching the app opens the Junction desktop window.
 echo  For browser debugging, run: python main.py --browser
 echo ========================================
 echo.
