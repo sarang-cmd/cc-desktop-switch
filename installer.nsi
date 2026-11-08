@@ -4,12 +4,12 @@
 ;  Prerequisites:
 ;     1. Install NSIS 3.0+
 ;     2. Run: makensis installer.nsi
-;     3. Output: Junction-Setup-1.0.29.exe
+;     3. Output: Junction-Setup-1.0.30.exe
 ;============================================
 
 !define PRODUCT_NAME "Junction"
 !ifndef PRODUCT_VERSION
-  !define PRODUCT_VERSION "1.0.29"
+  !define PRODUCT_VERSION "1.0.30"
 !endif
 !define PRODUCT_PUBLISHER "Junction contributors"
 ; Keep the legacy install directory so upgrades replace the previous installation in place.

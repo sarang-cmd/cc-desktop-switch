@@ -7,6 +7,14 @@
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+## v1.0.30
+
+Release notes: [docs/release-notes-v1.0.30.md](release-notes-v1.0.30.md)
+
+- Added per-provider opt-in Compact requests for providers with small request or tokens-per-minute limits.
+- Added redacted upstream error-body and request-size diagnostics, plus a clear 413 tokens-per-minute explanation.
+- Kept compaction off by default; existing provider behavior is unchanged unless enabled.
+
 ## v1.0.29
 
 Release notes: [docs/release-notes-v1.0.29.md](release-notes-v1.0.29.md)

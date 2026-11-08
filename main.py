@@ -31,7 +31,7 @@ from backend.main import (
 
 
 APP_NAME = "Junction"
-APP_VERSION = "1.0.29"
+APP_VERSION = "1.0.30"
 TRAY_OPEN_LABEL = i18n.get_text("tray.open", "en")
 TRAY_QUIT_LABEL = i18n.get_text("tray.quit", "en")
 _macos_app_delegate = None

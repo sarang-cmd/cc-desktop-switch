@@ -8,7 +8,7 @@ from backend.proxy import create_proxy_app
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.0.29"
+EXPECTED_VERSION = "1.0.30"
 EXPECTED_REPOSITORY = "sarang-cmd/junction"
 
 
@@ -67,7 +67,7 @@ class ReleaseVersionSyncTests(unittest.TestCase):
         self.assertIn('"mac-arm-pkg": /macos-arm64\\.pkg$/i', site_script)
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("published v1.0.28 release", readme)
-        self.assertIn('[string]$Version = "1.0.29"', release_script)
+        self.assertIn('[string]$Version = "1.0.30"', release_script)
 
     def test_installer_syntax_workflow_uses_the_rebranded_payload_directory(self):
         workflow = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")

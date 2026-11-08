@@ -948,7 +948,7 @@ async def _detect_local_proxy() -> Optional[str]:
 
 def create_admin_app() -> FastAPI:
     """Create the admin FastAPI application."""
-    app = FastAPI(title="Junction Admin", version="1.0.29")
+    app = FastAPI(title="Junction Admin", version="1.0.30")
 
     @app.middleware("http")
     async def require_local_admin_auth(request: Request, call_next):
