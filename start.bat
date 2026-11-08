@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 title Junction
 echo ========================================
-echo    Junction v1.0.29
+echo    Junction v1.0.30
 echo    Starting the admin console...
 echo ========================================
 
