@@ -55,6 +55,12 @@ class ReleaseVersionSyncTests(unittest.TestCase):
         custom = cfg.normalize_config({"settings": {"updateUrl": custom_url}})
         self.assertEqual(custom["settings"]["updateUrl"], custom_url)
 
+    def test_installer_syntax_workflow_uses_the_rebranded_payload_directory(self):
+        workflow = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
+        installer = (ROOT / "installer.nsi").read_text(encoding="utf-8")
+        self.assertIn("mkdir -p dist/Junction", workflow)
+        self.assertIn('File /r "dist\\Junction\\*.*"', installer)
+
     def test_upgrade_compatibility_identifiers_remain_stable(self):
         config = (ROOT / "backend/config.py").read_text(encoding="utf-8")
         installer = (ROOT / "installer.nsi").read_text(encoding="utf-8")
