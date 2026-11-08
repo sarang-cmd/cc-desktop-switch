@@ -31,6 +31,18 @@ class SiteContractTests(unittest.TestCase):
         self.assertIn('<svg', mark)
         self.assertIn('.brand img { width: 38px; height: 38px;', css)
 
+    def test_site_uses_a_restrained_neumorphic_surface_system(self):
+        homepage = (SITE / "index.html").read_text(encoding="utf-8")
+        css = (SITE / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('--shadow-raised:', css)
+        self.assertIn('--shadow-pressed:', css)
+        self.assertIn('box-shadow: var(--shadow-raised)', css)
+        self.assertIn('box-shadow: var(--shadow-pressed)', css)
+        self.assertNotIn('hero-orbit', homepage)
+        self.assertNotIn('5px 5px 0 var(--ink)', css)
+        self.assertNotIn('2px solid var(--ink)', css)
+        self.assertIn('background: var(--page)', css)
+
     def test_legal_pages_are_linked_and_marked_as_drafts(self):
         homepage = (SITE / "index.html").read_text(encoding="utf-8")
         self.assertIn('href="terms.html"', homepage)
