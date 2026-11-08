@@ -135,4 +135,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        print(f"SCREENSHOT_ERROR={type(exc).__name__}: {exc}", flush=True)
+        raise

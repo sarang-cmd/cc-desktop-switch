@@ -36,8 +36,12 @@ jobs:
             exit 0
           fi
           code=${PIPESTATUS[0]}
-          summary="$(tail -n 12 capture.log | tr '\\n' ' ' | cut -c1-1800)"
+          summary="$(grep '^SCREENSHOT_ERROR=' capture.log | tail -n 1 | cut -c1-1500)"
           echo "::error title=Screenshot capture failed::$summary"
+          echo "## Screenshot capture failure" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`text" >> "$GITHUB_STEP_SUMMARY"
+          tail -n 30 capture.log >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
           exit "$code"
       - uses: actions/upload-artifact@v4
         if: always()
