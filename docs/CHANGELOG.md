@@ -7,6 +7,14 @@
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+## v1.0.27
+
+Release notes: [docs/release-notes-v1.0.27.md](release-notes-v1.0.27.md)
+
+- Bundled local vector brand logos for recognized providers; no runtime logo-service request is needed.
+- Refined logo sizing for square symbols and wordmarks.
+- Shipped the Neumorphic app redesign and genuine locally captured README screenshots.
+
 ## v1.0.26
 
 Release notes: [docs/release-notes-v1.0.26.md](release-notes-v1.0.26.md)

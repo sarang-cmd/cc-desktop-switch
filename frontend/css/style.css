@@ -727,6 +727,12 @@ label[for],
   object-fit: cover;
   background: #fff;
 }
+.provider-logo img[src$=".svg"],
+.preset-logo img[src$=".svg"] {
+  padding: 8px;
+  object-fit: contain;
+  background: transparent;
+}
 
 .preset-item strong {
   display: block;

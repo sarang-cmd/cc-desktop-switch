@@ -8,7 +8,7 @@ from backend.proxy import create_proxy_app
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.0.26"
+EXPECTED_VERSION = "1.0.27"
 
 
 class ReleaseVersionSyncTests(unittest.TestCase):
