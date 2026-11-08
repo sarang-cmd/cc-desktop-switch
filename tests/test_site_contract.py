@@ -22,6 +22,15 @@ class SiteContractTests(unittest.TestCase):
         self.assertIn('data-asset="mac-arm-pkg"', html)
         self.assertIn('data-asset="mac-intel-pkg"', html)
 
+    def test_brand_uses_the_crisp_transparent_junction_mark(self):
+        homepage = (SITE / "index.html").read_text(encoding="utf-8")
+        mark = (SITE / "assets" / "junction-mark.svg").read_text(encoding="utf-8")
+        css = (SITE / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('assets/junction-mark.svg', homepage)
+        self.assertNotIn('assets/junction-liquid-glass.png', homepage)
+        self.assertIn('<svg', mark)
+        self.assertIn('.brand img { width: 38px; height: 38px;', css)
+
     def test_legal_pages_are_linked_and_marked_as_drafts(self):
         homepage = (SITE / "index.html").read_text(encoding="utf-8")
         self.assertIn('href="terms.html"', homepage)
@@ -56,7 +65,7 @@ class SiteContractTests(unittest.TestCase):
     def test_vercel_is_the_documented_static_site_host(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         privacy = (SITE / "privacy.html").read_text(encoding="utf-8")
-        self.assertIn("https://junction-nu.vercel.app/", readme)
+        self.assertIn("[claude-junction.vercel.app](http://claude-junction.vercel.app)", readme)
         self.assertIn("hosted by Vercel", privacy)
         self.assertFalse((ROOT / ".github/workflows/pages.yml").exists())
 

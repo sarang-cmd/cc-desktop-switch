@@ -14,7 +14,7 @@
   <a href="https://github.com/sarang-cmd/junction/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sarang-cmd/junction/total?label=downloads"></a>
 </p>
 
-产品网站：<https://junction-nu.vercel.app/>
+产品网站：[claude-junction.vercel.app](http://claude-junction.vercel.app)
 
 Junction 是一个面向 Claude Desktop 官方桌面客户端的轻量配置工具。它可以用桌面界面管理 DeepSeek、Kimi、智谱 GLM、阿里云百炼、小米 MiMo 等第三方 Anthropic 兼容 API 提供商，并一键写入 Claude Desktop 的第三方推理配置。
 
@@ -70,12 +70,14 @@ v1.0.18 起，Claude Desktop 默认会连接 Junction 的本机 gateway：`127.0
 https://github.com/sarang-cmd/junction/releases/latest
 ```
 
+当前公开的最新版本为 v1.0.27，下载文件仍使用旧的 `CC-Desktop-Switch` 名称以保持兼容。下一版 Junction 构建会使用 `Junction-v<version>` 文件名前缀。
+
 推荐下载：
 
-- `CC-Desktop-Switch-v<version>-Windows-Setup.exe`：Windows 安装版
-- `CC-Desktop-Switch-v<version>-Windows-Portable.zip`：Windows 便携版
-- `CC-Desktop-Switch-v<version>-macOS-arm64.pkg`：macOS 安装包
-- `CC-Desktop-Switch-v<version>-macOS-arm64.dmg`：macOS 拖拽安装包
+- `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`：Windows 安装版
+- `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`：Windows 便携版
+- `CC-Desktop-Switch-v1.0.27-macOS-arm64.pkg`：macOS 安装包
+- `CC-Desktop-Switch-v1.0.27-macOS-arm64.dmg`：macOS 拖拽安装包
 
 Windows 版暂时没有 Authenticode 代码签名证书，系统可能提示未知发布者。Release 页面提供 `.sha256`、`.sig` 和公钥用于校验完整性。
 
@@ -147,9 +149,7 @@ netstat -ano | findstr :18080
 
 ### 卸载后 Claude Desktop 仍显示“由组织管理”
 
-Junction 使用 Claude Desktop 的策略位置写入第三方推理配置。现在 Windows 正常卸载时，只会删除带有 `ccds_managed=true` 标记、由 CCDS 自己写入的策略值；静默覆盖升级会传入 `/UPGRADE` 并保留当前 provider 配置。HKLM、MDM 或其他管理员写入的组织策略不会被删除。
-
-v1.0.25 及更早版本建议先在应用中执行“清除桌面版配置”再卸载。若之后仍显示由组织管理，应检查机器级或组织级策略，不要直接删除无关注册表项。
+当前 Windows 版本会把 Junction 连接保存在 Claude Desktop 的 `configLibrary` 中，并且只修改桌面配置里的 `deploymentMode`，不会新建注册表策略。应用或清除配置时，只会删除带有 `ccds_managed=true` 标记的 Junction 旧版 HKCU 策略值；未知或未标记的值会保留并报告。Junction 不会清理 HKLM。若 Claude 仍显示“由组织管理”，请按提示检查确切策略路径并联系管理员。较旧版本可能需要先在应用中执行一次“清除桌面版配置”以迁移已标记的旧值。
 
 ### DeepSeek Max / 推理参数报错
 

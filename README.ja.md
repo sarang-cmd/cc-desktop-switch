@@ -14,7 +14,7 @@
   <a href="https://github.com/sarang-cmd/junction/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sarang-cmd/junction/total?label=downloads"></a>
 </p>
 
-製品サイト：<https://junction-nu.vercel.app/>
+製品サイト：[claude-junction.vercel.app](http://claude-junction.vercel.app)
 
 Junction は、公式 Claude Desktop クライアント向けの軽量なデスクトップ設定ツールです。DeepSeek、Kimi、Zhipu GLM、Alibaba Cloud Bailian、Xiaomi MiMo などの Anthropic 互換 API プロバイダーを管理し、Claude Desktop のサードパーティ推論設定をワンクリックで適用できます。
 
@@ -70,12 +70,14 @@ v1.0.18 以降、Claude Desktop は `127.0.0.1` のローカル Junction gateway
 https://github.com/sarang-cmd/junction/releases/latest
 ```
 
+公開中の最新リリース v1.0.27 では、互換性のため旧 `CC-Desktop-Switch` 名のアセットが使われています。次の Junction ビルドでは `Junction-v<version>` の名前になります。
+
 推奨ファイル：
 
-- `CC-Desktop-Switch-v<version>-Windows-Setup.exe`：Windows installer
-- `CC-Desktop-Switch-v<version>-Windows-Portable.zip`：Windows portable package
-- `CC-Desktop-Switch-v<version>-macOS-arm64.pkg`：macOS installer
-- `CC-Desktop-Switch-v<version>-macOS-arm64.dmg`：macOS drag-and-drop package
+- `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`：Windows installer
+- `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`：Windows portable package
+- `CC-Desktop-Switch-v1.0.27-macOS-arm64.pkg`：macOS installer
+- `CC-Desktop-Switch-v1.0.27-macOS-arm64.dmg`：macOS drag-and-drop package
 
 Windows build にはまだ Authenticode code signing certificate がありません。そのため、Windows が unknown publisher warning を表示する場合があります。Release assets には `.sha256`、`.sig`、public key が含まれています。
 

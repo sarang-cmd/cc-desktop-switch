@@ -2,7 +2,7 @@
 
 **Manage Claude Desktop providers and model routes from one local app.**
 
-Product website: <https://junction-nu.vercel.app/>
+Product website: [claude-junction.vercel.app](http://claude-junction.vercel.app)
 
 
 Junction helps Windows and macOS users connect Claude Desktop to Anthropic-compatible and OpenAI-compatible API providers. Choose a provider, set the model routes you want, then apply the configuration to Claude Desktop.
@@ -17,11 +17,11 @@ These genuine app screenshots were captured locally with sample configuration an
 
 | Provider dashboard | Desktop model routing |
 | --- | --- |
-| ![Provider dashboard showing configured providers and available presets](docs/screenshots/dashboard.png) | ![Provider form showing the Neumorphic model-routing patchboard](docs/screenshots/provider-routing.png) |
+| ![Provider dashboard showing configured providers and available presets](docs/screenshots/dashboard.png) | ![Provider form showing the model-routing patchboard](docs/screenshots/provider-routing.png) |
 
 ### Mobile model routing
 
-![Mobile view of the Neumorphic model-routing patchboard](docs/screenshots/provider-routing-mobile.png)
+![Mobile view of the model-routing patchboard](docs/screenshots/provider-routing-mobile.png)
 
 ## What you can do
 
@@ -106,7 +106,7 @@ Check the provider's base URL, API key, model ID, and API format. If you use an 
 
 ### Claude Desktop reports that it is managed by an organization
 
-On Windows, Junction writes marked policy values to configure third-party inference. A normal uninstall removes only policy values carrying the `ccds_managed=true` marker. It does not remove policy values owned by Windows, an organization, or another administrator. Use **Clear Desktop Config** before uninstalling older versions if necessary, then check with your administrator if the managed notice remains.
+Current Windows releases store Junction's connection in Claude Desktop's `configLibrary` and change only `deploymentMode` in Claude's desktop config. They do not create registry policy values. Apply and Clear remove only known legacy HKCU values carrying Junction's `ccds_managed=true` marker; unknown or unmarked values are preserved and reported. Junction never clears HKLM. If Claude still reports that it is managed, review the exact remaining policy path with your administrator. Older releases may need **Clear Desktop Config** once to migrate their marked values.
 
 ### Model or reasoning errors
 

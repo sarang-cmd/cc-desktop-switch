@@ -1,14 +1,15 @@
 """Windows registry / macOS plist operations for configuring Claude Desktop 3P mode."""
 
-import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import uuid
 from typing import Optional
 
+from backend import config as app_config
 from backend import i18n
 from backend.model_alias import all_provider_model_entries, desktop_model_entries
 
@@ -16,7 +17,7 @@ REGISTRY_PATH = r"SOFTWARE\Policies\Claude"
 CCDS_MARKER = "ccds_managed"
 COWORK_EGRESS_ALLOWED_HOSTS = '["*"]'
 
-# Expected configuration items (name -> (default_value, value_type))
+# Legacy policy values retained for marker-gated migration and macOS preference compatibility.
 DESKTOP_CONFIG = {
     "inferenceProvider": ("gateway", str),
     "inferenceGatewayApiKey": ("", str),
@@ -131,143 +132,147 @@ def serialize_inference_models(
 
 # ── Windows ──
 
-def _win_get_key(read_only=False):
+def _win_policy_values(hive_name: str) -> dict:
+    """Read values from a Claude policy hive. This function never creates or writes keys."""
     import winreg
+
+    hive = winreg.HKEY_CURRENT_USER if hive_name == "HKCU" else winreg.HKEY_LOCAL_MACHINE
+    result = {"key": f"{hive_name}\\{REGISTRY_PATH}", "exists": False, "values": [], "error": ""}
     try:
-        if read_only:
-            return winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH, 0, winreg.KEY_READ)
-        else:
-            return winreg.CreateKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH)
-    except (PermissionError, FileNotFoundError, OSError):
-        return None
+        key = winreg.OpenKey(hive, REGISTRY_PATH, 0, winreg.KEY_READ)
+    except FileNotFoundError:
+        return result
+    except OSError as exc:
+        result["error"] = str(exc)
+        return result
 
-
-def _b64_utf8(value: str) -> str:
-    """Encode a string as Base64 to avoid PowerShell argument escaping issues."""
-    return base64.b64encode(str(value or "").encode("utf-8")).decode("ascii")
-
-
-def _ps_single_quote(value: str) -> str:
-    """Escape a single-quoted PowerShell string."""
-    return "'" + str(value).replace("'", "''") + "'"
-
-
-def _current_user_sid() -> str:
-    """Read the current logged-in user SID so elevated writes target the original user hive."""
+    result["exists"] = True
     try:
-        result = subprocess.run(
-            [
-                "powershell",
-                "-NoProfile",
-                "-Command",
-                "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-    except Exception:
-        return ""
-    if result.returncode != 0:
-        return ""
-    return result.stdout.strip()
-
-
-def _run_elevated_powershell(script_text: str) -> tuple[bool, str]:
-    """Run a temporary PowerShell script with UAC elevation."""
-    fd, script_path = tempfile.mkstemp(prefix="ccds-desktop-config-", suffix=".ps1")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(script_text)
-
-        command = (
-            "$p = Start-Process -FilePath 'powershell.exe' "
-            "-ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',"
-            f"{_ps_single_quote(script_path)}) "
-            "-WindowStyle Hidden -Verb RunAs -Wait -PassThru; exit $p.ExitCode"
-        )
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        output = "\n".join(part for part in (result.stdout, result.stderr) if part).strip()
-        return result.returncode == 0, output
-    except subprocess.TimeoutExpired as exc:
-        return False, i18n.t("registry.admin_timeout", error=exc)
-    except Exception as exc:
-        return False, str(exc)
+        index = 0
+        while True:
+            name, value, value_type = winreg.EnumValue(key, index)
+            result["values"].append({"name": name, "value": value, "type": value_type})
+            index += 1
+    except OSError as exc:
+        if getattr(exc, "winerror", None) != 259 and "no more" not in str(exc).lower():
+            result["error"] = str(exc)
     finally:
-        try:
-            os.remove(script_path)
-        except OSError:
-            pass
+        winreg.CloseKey(key)
+    return result
 
 
-def _win_apply_config_elevated(
-    base_url: str,
-    gateway_api_key: str = "",
-    inference_models: str = "",
-    auth_scheme: str = "bearer",
-    gateway_headers: str = "",
-) -> dict:
-    """Write the current user's Claude Desktop policy via UAC elevation when direct access fails."""
-    sid = _current_user_sid()
-    target_path = f"Registry::HKEY_USERS\\{sid}\\{REGISTRY_PATH}" if sid else r"HKCU:\SOFTWARE\Policies\Claude"
-    script = f"""
-$ErrorActionPreference = 'Stop'
-function DecodeUtf8([string]$Value) {{
-    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Value))
-}}
-$path = DecodeUtf8 '{_b64_utf8(target_path)}'
-if (-not (Test-Path -LiteralPath $path)) {{
-    New-Item -Path $path -Force | Out-Null
-}}
-$baseUrl = DecodeUtf8 '{_b64_utf8(base_url)}'
-$gatewayApiKey = DecodeUtf8 '{_b64_utf8(gateway_api_key)}'
-$inferenceModels = DecodeUtf8 '{_b64_utf8(inference_models or DESKTOP_CONFIG["inferenceModels"][0])}'
-$authScheme = DecodeUtf8 '{_b64_utf8(auth_scheme or "bearer")}'
-$gatewayHeaders = DecodeUtf8 '{_b64_utf8(gateway_headers or "[]")}'
-$coworkEgressAllowedHosts = DecodeUtf8 '{_b64_utf8(COWORK_EGRESS_ALLOWED_HOSTS)}'
-New-ItemProperty -LiteralPath $path -Name 'inferenceProvider' -Value 'gateway' -PropertyType String -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name 'inferenceGatewayBaseUrl' -Value $baseUrl -PropertyType String -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name 'inferenceGatewayApiKey' -Value $gatewayApiKey -PropertyType String -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name 'inferenceGatewayAuthScheme' -Value $authScheme -PropertyType String -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name 'inferenceGatewayHeaders' -Value $gatewayHeaders -PropertyType String -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name 'inferenceModels' -Value $inferenceModels -PropertyType String -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name 'isClaudeCodeForDesktopEnabled' -Value 1 -PropertyType DWord -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name 'coworkEgressAllowedHosts' -Value $coworkEgressAllowedHosts -PropertyType String -Force | Out-Null
-New-ItemProperty -LiteralPath $path -Name '{CCDS_MARKER}' -Value 'true' -PropertyType String -Force | Out-Null
-"""
-    ok, output = _run_elevated_powershell(script)
-    if ok:
-        return {"success": True, "message": i18n.t("registry.admin_applied")}
-    detail = output or i18n.t("registry.admin_cancelled")
-    return {"success": False, "message": i18n.t("registry.admin_required", detail=detail)}
+def _win_clean_marked_policy_values() -> dict:
+    """Remove legacy HKCU values only when Junction's historical marker is present."""
+    import winreg
+
+    snapshot = _win_policy_values("HKCU")
+    values = {item["name"]: item["value"] for item in snapshot["values"]}
+    if str(values.get(CCDS_MARKER, "")).lower() != "true":
+        return {"success": True, "removed": 0, "message": "No Junction-owned legacy policy marker was present."}
+
+    managed = set(DESKTOP_CONFIG) | {CCDS_MARKER}
+    names = [item["name"] for item in snapshot["values"] if item["name"] in managed]
+    if not names:
+        return {"success": True, "removed": 0, "message": "No legacy Junction policy values remained."}
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            REGISTRY_PATH,
+            0,
+            winreg.KEY_SET_VALUE,
+        )
+    except OSError as exc:
+        return {"success": False, "removed": 0, "message": f"Could not open HKCU\\{REGISTRY_PATH} for cleanup: {exc}"}
+
+    failures = []
+    removed = 0
+    try:
+        for name in names:
+            try:
+                winreg.DeleteValue(key, name)
+                removed += 1
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                failures.append(f"{name}: {exc}")
+    finally:
+        winreg.CloseKey(key)
+    if failures:
+        return {
+            "success": False,
+            "removed": removed,
+            "message": "Could not remove some Junction-owned legacy policy values: " + "; ".join(failures),
+        }
+    return {"success": True, "removed": removed, "message": f"Removed {removed} Junction-owned legacy policy values."}
+
+
+def _win_policy_lock_warnings() -> list[str]:
+    """Explain any remaining policy values that can keep Claude's UI organization-managed."""
+    warnings = []
+    known = set(DESKTOP_CONFIG) | {CCDS_MARKER}
+    user = _win_policy_values("HKCU")
+    machine = _win_policy_values("HKLM")
+    if user.get("error"):
+        warnings.append(i18n.t("registry.policy_read_error", path=user["key"], error=user["error"]))
+    if machine.get("error"):
+        warnings.append(i18n.t("registry.policy_read_error", path=machine["key"], error=machine["error"]))
+
+    marker = next((item["value"] for item in user["values"] if item["name"] == CCDS_MARKER), None)
+    marker_is_ours = str(marker or "").lower() == "true"
+    for item in user["values"]:
+        name = item["name"]
+        if name == CCDS_MARKER:
+            continue
+        if name in known:
+            if not marker_is_ours:
+                warnings.append(i18n.t("registry.policy_unmarked_value", path=f"{user['key']}\\{name}"))
+            else:
+                warnings.append(i18n.t("registry.policy_legacy_remained", path=f"{user['key']}\\{name}"))
+        else:
+            warnings.append(i18n.t("registry.policy_unknown_value", path=f"{user['key']}\\{name}"))
+    for item in machine["values"]:
+        warnings.append(i18n.t("registry.policy_hklm_value", path=f"{machine['key']}\\{item['name']}"))
+    return warnings
 
 
 def _win_get_config_status() -> dict:
-    import winreg
-    key = _win_get_key(read_only=True)
-    if key is None:
-        return {"configured": False, "keys": {}, "message": i18n.t("registry.key_missing")}
-    result = {"configured": False, "keys": {}, "message": ""}
-    try:
-        i = 0
-        while True:
-            name, value, _ = winreg.EnumValue(key, i)
-            result["keys"][name] = _safe_config_value(name, value)
-            i += 1
-    except OSError:
-        pass
-    finally:
-        winreg.CloseKey(key)
-    result["configured"] = (
-        result["keys"].get("inferenceProvider") == "gateway"
-        and result["keys"].get(CCDS_MARKER) == "true"
-    )
-    return result
+    library_status = _get_library_config_status()
+    user_policy = _win_policy_values("HKCU")
+    policy_values = {item["name"]: item["value"] for item in user_policy["values"]}
+    marked_legacy = str(policy_values.get(CCDS_MARKER, "")).lower() == "true"
+
+    if library_status.get("keys"):
+        keys = dict(library_status["keys"])
+        configured = library_status.get("configured", False)
+        active_source = "configLibrary"
+    elif marked_legacy:
+        keys = {
+            item["name"]: _safe_config_value(item["name"], item["value"])
+            for item in user_policy["values"]
+            if item["name"] in DESKTOP_CONFIG
+        }
+        configured = keys.get("inferenceProvider") == "gateway"
+        active_source = "legacyPolicy" if keys else ""
+    else:
+        keys = {}
+        configured = False
+        active_source = ""
+
+    warnings = _win_policy_lock_warnings()
+    message = "; ".join(warnings) or library_status.get("message", "")
+    return {
+        "configured": configured,
+        "keys": keys,
+        "message": message,
+        "activeSource": active_source,
+        "keySources": {name: active_source for name in keys},
+        "sources": {
+            "configLibrary": library_status.get("configured", False),
+            "legacyPolicy": marked_legacy,
+        },
+        "lockedByOtherPolicy": bool(warnings),
+        "policyWarnings": warnings,
+    }
 
 
 def _win_apply_config(
@@ -276,68 +281,66 @@ def _win_apply_config(
     inference_models: str = "",
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
+    chat_tab_enabled: bool = True,
 ) -> dict:
-    key = _win_get_key(read_only=False)
-    if key is None:
-        return _win_apply_config_elevated(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
-    import winreg
-    try:
-        inference_models = inference_models or DESKTOP_CONFIG["inferenceModels"][0]
-        values = {
-            "inferenceProvider": ("gateway", winreg.REG_SZ),
-            "inferenceGatewayBaseUrl": (base_url, winreg.REG_SZ),
-            "inferenceGatewayApiKey": (gateway_api_key, winreg.REG_SZ),
-            "inferenceGatewayAuthScheme": (auth_scheme or "bearer", winreg.REG_SZ),
-            "inferenceGatewayHeaders": (gateway_headers or "[]", winreg.REG_SZ),
-            "inferenceModels": (inference_models, winreg.REG_SZ),
-            "isClaudeCodeForDesktopEnabled": (1, winreg.REG_DWORD),
-            "coworkEgressAllowedHosts": (COWORK_EGRESS_ALLOWED_HOSTS, winreg.REG_SZ),
-            CCDS_MARKER: ("true", winreg.REG_SZ),
-        }
-        for name, (value, type_) in values.items():
-            winreg.SetValueEx(key, name, 0, type_, value)
-        return {"success": True, "message": i18n.t("registry.applied")}
-    except PermissionError:
-        return _win_apply_config_elevated(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
-    except Exception as e:
-        return {"success": False, "message": i18n.t("registry.apply_failed", error=str(e))}
-    finally:
-        winreg.CloseKey(key)
+    library_result = _apply_library_config(
+        base_url,
+        gateway_api_key,
+        inference_models,
+        auth_scheme,
+        gateway_headers,
+        chat_tab_enabled,
+    )
+    if not library_result.get("success"):
+        return library_result
+
+    mode_result = _set_deployment_mode("3p")
+    if not mode_result.get("success"):
+        return mode_result
+
+    legacy_result = _win_clean_marked_policy_values()
+    warnings = _win_policy_lock_warnings()
+    messages = []
+    if not legacy_result.get("success"):
+        messages.append(legacy_result.get("message", "Legacy policy cleanup failed."))
+    messages.extend(warnings)
+    result = {"success": True, "message": "Junction configLibrary entry applied."}
+    if messages:
+        result["message"] += " " + " ".join(messages)
+    if warnings:
+        result["lockedByOtherPolicy"] = True
+        result["policyWarnings"] = warnings
+    return result
 
 
 def _win_clear_config() -> dict:
-    import winreg
-    # Read all existing value names
-    key = _win_get_key(read_only=True)
-    if key is None:
-        return {"success": True, "message": i18n.t("registry.key_missing_no_clear")}
-    names = []
-    try:
-        i = 0
-        while True:
-            name, _, _ = winreg.EnumValue(key, i)
-            names.append(name)
-            i += 1
-    except OSError:
-        pass
-    finally:
-        winreg.CloseKey(key)
+    library_result = _clear_library_config()
+    if not library_result.get("success"):
+        return library_result
 
-    managed = _managed_policy_names(names)
-    if not managed:
-        return {"success": True, "message": i18n.t("registry.nothing_to_clear")}
+    mode_result = {"success": True, "message": ""}
+    if library_result.get("wasActive") and not library_result.get("remainingEntries"):
+        mode_result = _set_deployment_mode("clear")
 
-    key = _win_get_key(read_only=False)
-    if key is None:
-        return {"success": False, "message": i18n.t("registry.open_failed")}
-    try:
-        for name in managed:
-            winreg.DeleteValue(key, name)
-        return {"success": True, "message": i18n.t("registry.cleared_count", count=len(managed))}
-    except Exception as e:
-        return {"success": False, "message": i18n.t("registry.clear_failed", error=str(e))}
-    finally:
-        winreg.CloseKey(key)
+    legacy_result = _win_clean_marked_policy_values()
+    warnings = _win_policy_lock_warnings()
+    failures = [
+        item.get("message", "Clear failed.")
+        for item in (mode_result, legacy_result)
+        if not item.get("success")
+    ]
+    if failures:
+        return {"success": False, "message": " ".join(failures)}
+
+    message = "Junction's configLibrary entry and marked legacy policy values were cleared."
+    if warnings:
+        message += " " + " ".join(warnings)
+    return {
+        "success": True,
+        "message": message,
+        "lockedByOtherPolicy": bool(warnings),
+        "policyWarnings": warnings,
+    }
 
 
 # ── macOS ──
@@ -427,20 +430,47 @@ def _mac_apply_plist_config(
         return {"success": False, "message": i18n.t("registry.macos_failed", error=str(e))}
 
 
+def _windows_config_root_path() -> str:
+    """Prefer LOCALAPPDATA; fall back to APPDATA only when it is the existing legacy root."""
+    local_base = os.environ.get("LOCALAPPDATA", "").strip()
+    legacy_base = os.environ.get("APPDATA", "").strip()
+    local_root = os.path.join(local_base, "Claude-3p") if local_base else ""
+    legacy_root = os.path.join(legacy_base, "Claude-3p") if legacy_base else ""
+    if local_root and os.path.isdir(local_root):
+        return local_root
+    if legacy_root and os.path.isdir(legacy_root):
+        return legacy_root
+    if local_root:
+        return local_root
+    if legacy_root:
+        return legacy_root
+    return os.path.join(os.path.expanduser("~"), "AppData", "Local", "Claude-3p")
+
+
 def _mac_config_json_path() -> str:
     return os.path.expanduser(MAC_3P_CONFIG)
 
 
-def _mac_config_library_dir_path() -> str:
-    return os.path.join(os.path.dirname(_mac_config_json_path()), MAC_3P_CONFIG_LIBRARY)
+def _config_root_path() -> str:
+    if _os_name() == "win":
+        return _windows_config_root_path()
+    return os.path.dirname(_mac_config_json_path())
 
 
-def _mac_config_library_meta_path() -> str:
-    return os.path.join(_mac_config_library_dir_path(), "_meta.json")
+def _config_json_path() -> str:
+    return os.path.join(_config_root_path(), "claude_desktop_config.json")
 
 
-def _mac_config_library_entry_path(entry_id: str) -> str:
-    return os.path.join(_mac_config_library_dir_path(), f"{entry_id}.json")
+def _config_library_dir_path() -> str:
+    return os.path.join(_config_root_path(), MAC_3P_CONFIG_LIBRARY)
+
+
+def _config_library_meta_path() -> str:
+    return os.path.join(_config_library_dir_path(), "_meta.json")
+
+
+def _config_library_entry_path(entry_id: str) -> str:
+    return os.path.join(_config_library_dir_path(), f"{entry_id}.json")
 
 
 def _mac_read_json_file(path: str) -> tuple[bool, dict, str]:
@@ -476,179 +506,297 @@ def _mac_write_json_file(path: str, data: dict) -> tuple[bool, str]:
         return False, str(exc)
 
 
-def _mac_read_json_config() -> tuple[bool, dict, str]:
-    return _mac_read_json_file(_mac_config_json_path())
+def _set_deployment_mode(mode: str) -> dict:
+    """Change only deploymentMode, preserve all other Claude preferences, and keep a first-change backup."""
+    path = _config_json_path()
+    ok, data, message = _mac_read_json_file(path)
+    if not ok:
+        return {"success": False, "message": f"Could not read Claude Desktop config: {message}"}
+    if data.get("deploymentMode") == mode:
+        return {"success": True, "message": ""}
+
+    if os.path.isfile(path):
+        backup_path = path + ".junction.bak"
+        try:
+            if not os.path.exists(backup_path):
+                shutil.copy2(path, backup_path)
+        except OSError as exc:
+            return {"success": False, "message": f"Could not back up Claude Desktop config: {exc}"}
+
+    data["deploymentMode"] = mode
+    ok, message = _mac_write_json_file(path, data)
+    if not ok:
+        return {"success": False, "message": f"Could not update Claude Desktop deploymentMode: {message}"}
+    return {"success": True, "message": ""}
 
 
-def _mac_write_json_config(data: dict) -> tuple[bool, str]:
-    return _mac_write_json_file(_mac_config_json_path(), data)
+def _mac_get_json_config_status() -> dict:
+    path = _config_json_path()
+    exists = os.path.exists(path)
+    ok, data, message = _mac_read_json_file(path)
+    if not ok:
+        return {"configured": False, "keys": {}, "message": message, "exists": exists}
+    return {
+        "configured": data.get("deploymentMode") == "3p",
+        "keys": {},
+        "message": "",
+        "exists": exists,
+    }
 
 
-def _mac_json_inference_models(inference_models: str) -> list:
+JUNCTION_LIBRARY_ENTRY_SETTING = "claudeConfigLibraryEntryId"
+JUNCTION_PREVIOUS_APPLIED_SETTING = "claudeConfigLibraryPreviousAppliedId"
+
+
+def _library_entry_info() -> tuple[bool, dict, str]:
+    """Find only Junction's entry, using its saved ID or its exact display name."""
+    ok, meta, message = _mac_read_json_file(_config_library_meta_path())
+    if not ok:
+        return False, {}, message
+    entries = meta.get("entries", [])
+    if not isinstance(entries, list):
+        return False, {}, "configLibrary metadata entries is not a list"
+
+    saved_id = str(app_config.get_settings().get(JUNCTION_LIBRARY_ENTRY_SETTING) or "").strip()
+    candidate = None
+    if saved_id:
+        candidate = next(
+            (
+                entry for entry in entries
+                if isinstance(entry, dict)
+                and str(entry.get("id") or "") == saved_id
+                and entry.get("name") == "Junction"
+            ),
+            None,
+        )
+    if candidate is None:
+        candidate = next(
+            (entry for entry in entries if isinstance(entry, dict) and entry.get("name") == "Junction"),
+            None,
+        )
+    entry_id = str(candidate.get("id") or "").strip() if candidate else ""
+    if entry_id and (os.path.basename(entry_id) != entry_id or entry_id in {".", ".."}):
+        return False, {}, "Junction configLibrary entry ID is not a safe filename"
+    path = _config_library_entry_path(entry_id) if entry_id else ""
+    return True, {"meta": meta, "entries": entries, "entry": candidate, "id": entry_id, "path": path}, ""
+
+
+def _native_inference_models(inference_models: str) -> list[dict]:
+    """Convert internal model labels to Claude's observed configLibrary field names."""
     try:
-        parsed = json.loads(inference_models or DESKTOP_CONFIG["inferenceModels"][0])
+        parsed = json.loads(inference_models or "[]")
     except (TypeError, ValueError):
         parsed = []
     result = []
     seen = set()
-    if isinstance(parsed, list):
-        for item in parsed:
-            if isinstance(item, dict):
-                model_name = str(item.get("name") or "").strip()
-                if not model_name or model_name in seen:
-                    continue
-                seen.add(model_name)
-                cleaned = {"name": model_name}
-                display_name = str(item.get("displayName") or "").strip()
-                if display_name:
-                    cleaned["displayName"] = display_name
-                if item.get("supports1m") is True:
-                    cleaned["supports1m"] = True
-                result.append(cleaned)
-            else:
-                model_name = str(item or "").strip()
-                if not model_name or model_name in seen:
-                    continue
-                seen.add(model_name)
-                result.append(model_name)
-    return result or ["sonnet", "haiku", "opus"]
-
-
-def _mac_json_policy_list(value: str) -> list[str]:
-    try:
-        parsed = json.loads(value or "[]")
-    except (TypeError, ValueError):
-        parsed = []
     if not isinstance(parsed, list):
-        return []
-    return [str(item) for item in parsed if str(item or "").strip()]
+        return result
+    for item in parsed:
+        if isinstance(item, dict):
+            name = str(item.get("name") or "").strip()
+            label = str(item.get("labelOverride") or item.get("displayName") or "").strip()
+        else:
+            name = str(item or "").strip()
+            label = ""
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        native = {"name": name}
+        if label:
+            native["labelOverride"] = label
+        result.append(native)
+    return result
 
 
-def _mac_json_gateway_headers(gateway_headers: str) -> list[str]:
-    try:
-        parsed = json.loads(gateway_headers or DESKTOP_CONFIG["inferenceGatewayHeaders"][0])
-    except (TypeError, ValueError):
-        parsed = []
-    if isinstance(parsed, list):
-        return [str(item) for item in parsed if str(item or "").strip()]
-    if isinstance(parsed, str) and parsed.strip():
-        return [parsed.strip()]
-    return []
-
-
-def _mac_json_enterprise_config(
+def _library_entry_expected_config(
     base_url: str,
     gateway_api_key: str,
     inference_models: str,
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
+    chat_tab_enabled: bool = True,
 ) -> dict:
+    """Build Junction's library entry from fields observed in Claude's native entry format."""
     return {
         "inferenceProvider": "gateway",
         "inferenceGatewayBaseUrl": base_url,
         "inferenceGatewayApiKey": gateway_api_key,
-        "inferenceGatewayAuthScheme": auth_scheme or DESKTOP_CONFIG["inferenceGatewayAuthScheme"][0],
-        "inferenceGatewayHeaders": _mac_json_gateway_headers(gateway_headers),
-        "inferenceModels": _mac_json_inference_models(inference_models),
-        "isClaudeCodeForDesktopEnabled": True,
-        "coworkEgressAllowedHosts": _mac_json_policy_list(COWORK_EGRESS_ALLOWED_HOSTS),
+        "chatTabEnabled": bool(chat_tab_enabled),
+        "modelDiscoveryEnabled": True,
+        "inferenceModels": _native_inference_models(inference_models),
     }
 
 
-def _mac_json_status_keys(enterprise_config: dict) -> dict:
-    keys = {}
-    for name in DESKTOP_CONFIG:
-        if name not in enterprise_config:
-            continue
-        value = enterprise_config.get(name)
-        if name == "inferenceModels" and isinstance(value, list):
-            value = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-        if name == "inferenceGatewayHeaders" and isinstance(value, list):
-            value = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-        if name == "coworkEgressAllowedHosts" and isinstance(value, list):
-            value = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-        if name == "isClaudeCodeForDesktopEnabled" and isinstance(value, bool):
-            value = int(value)
-        keys[name] = _safe_config_value(name, value)
-    return keys
-
-
-def _mac_flat_config_status_keys(config: dict) -> dict:
-    keys = _mac_json_status_keys(config)
-    aliases = {
-        "provider": "inferenceProvider",
-        "apiKey": "inferenceGatewayApiKey",
-        "authScheme": "inferenceGatewayAuthScheme",
-        "baseUrl": "inferenceGatewayBaseUrl",
-        "models": "inferenceModels",
-    }
-    for source, target in aliases.items():
-        if target in keys or source not in config:
-            continue
-        value = config.get(source)
-        if source == "models" and isinstance(value, dict):
-            value = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-        keys[target] = _safe_config_value(target, value)
-    return keys
-
-
-def _mac_get_json_config_status() -> dict:
-    path = _mac_config_json_path()
-    exists = os.path.exists(path)
-    ok, data, message = _mac_read_json_config()
-    if not ok:
-        return {"configured": False, "keys": {}, "message": message, "exists": exists}
-    enterprise_config = data.get("enterpriseConfig")
-    if not isinstance(enterprise_config, dict):
-        return {"configured": False, "keys": {}, "message": "", "exists": exists}
-    keys = _mac_json_status_keys(enterprise_config)
-    configured = data.get("deploymentMode") == "3p" and keys.get("inferenceProvider") == "gateway"
-    return {"configured": configured, "keys": keys, "message": "", "exists": exists}
-
-
-def _mac_config_library_entry_paths(include_missing_active: bool = False) -> tuple[bool, list[str], str]:
-    library_dir = _mac_config_library_dir_path()
-    meta_path = _mac_config_library_meta_path()
-    ok, meta, message = _mac_read_json_file(meta_path)
-    if not ok:
-        return False, [], message
-
-    paths = []
-    applied_id = str(meta.get("appliedId") or "").strip()
-    if applied_id and "/" not in applied_id and "\\" not in applied_id:
-        active_path = _mac_config_library_entry_path(applied_id)
-        if include_missing_active or os.path.exists(active_path):
-            paths.append(active_path)
-
-    if not paths and os.path.isdir(library_dir):
-        for name in sorted(os.listdir(library_dir)):
-            if not name.endswith(".json") or name == "_meta.json":
-                continue
-            paths.append(os.path.join(library_dir, name))
-
-    return True, paths, ""
-
-
-def _mac_get_library_config_status() -> dict:
-    ok, paths, message = _mac_config_library_entry_paths()
+def _get_library_config_status() -> dict:
+    ok, info, message = _library_entry_info()
     if not ok:
         return {"configured": False, "keys": {}, "message": message, "exists": False}
-    if not paths:
-        return {"configured": False, "keys": {}, "message": "", "exists": os.path.isdir(_mac_config_library_dir_path())}
+    if not info["id"]:
+        return {
+            "configured": False,
+            "keys": {},
+            "message": "",
+            "exists": os.path.isdir(_config_library_dir_path()),
+        }
+    ok, data, message = _mac_read_json_file(info["path"])
+    if not ok:
+        return {"configured": False, "keys": {}, "message": message, "exists": True}
+    keys = {}
+    for name in (
+        "inferenceProvider",
+        "inferenceGatewayBaseUrl",
+        "inferenceGatewayApiKey",
+        "chatTabEnabled",
+        "modelDiscoveryEnabled",
+        "inferenceModels",
+    ):
+        if name not in data:
+            continue
+        value = data[name]
+        if name == "inferenceModels" and isinstance(value, list):
+            value = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        keys[name] = _safe_config_value(name, value)
+    active = info["meta"].get("appliedId") == info["id"]
+    return {
+        "configured": keys.get("inferenceProvider") == "gateway" and active,
+        "keys": keys,
+        "message": "",
+        "exists": True,
+        "entryId": info["id"],
+        "active": active,
+    }
 
-    for path in paths:
-        ok, data, message = _mac_read_json_file(path)
+
+def _apply_library_config(
+    base_url: str,
+    gateway_api_key: str = "",
+    inference_models: str = "",
+    auth_scheme: str = "bearer",
+    gateway_headers: str = "",
+    chat_tab_enabled: bool = True,
+) -> dict:
+    ok, info, message = _library_entry_info()
+    if not ok:
+        return {"success": False, "message": f"Could not read configLibrary metadata: {message}"}
+
+    meta = info["meta"]
+    entries = list(info["entries"])
+    entry = info["entry"]
+    entry_id = info["id"] or str(uuid.uuid4())
+    previous_applied = str(meta.get("appliedId") or "").strip()
+    saved_settings = app_config.get_settings()
+    saved_previous = str(saved_settings.get(JUNCTION_PREVIOUS_APPLIED_SETTING) or "").strip()
+    if previous_applied == entry_id:
+        previous_applied = saved_previous
+    expected = _library_entry_expected_config(
+        base_url,
+        gateway_api_key,
+        inference_models or DESKTOP_CONFIG["inferenceModels"][0],
+        auth_scheme,
+        gateway_headers,
+        chat_tab_enabled,
+    )
+
+    entry_path = _config_library_entry_path(entry_id)
+    ok, data, message = _mac_read_json_file(entry_path)
+    if not ok:
+        return {"success": False, "message": f"Could not read Junction configLibrary entry: {message}"}
+    data.update(expected)
+    ok, message = _mac_write_json_file(entry_path, data)
+    if not ok:
+        return {"success": False, "message": f"Could not write Junction configLibrary entry: {message}"}
+    ok, saved, message = _mac_read_json_file(entry_path)
+    if not ok or any(saved.get(name) != value for name, value in expected.items()):
+        return {"success": False, "message": f"Junction configLibrary entry verification failed: {message or 'readback mismatch'}"}
+
+    if entry is None:
+        entries.append({"id": entry_id, "name": "Junction"})
+    else:
+        for item in entries:
+            if isinstance(item, dict) and str(item.get("id") or "") == entry_id and item.get("name") == "Junction":
+                item.setdefault("name", "Junction")
+                break
+    meta["entries"] = entries
+    meta["appliedId"] = entry_id
+    ok, message = _mac_write_json_file(_config_library_meta_path(), meta)
+    if not ok:
+        return {"success": False, "message": f"Could not update configLibrary metadata: {message}"}
+
+    app_config.update_settings({
+        JUNCTION_LIBRARY_ENTRY_SETTING: entry_id,
+        JUNCTION_PREVIOUS_APPLIED_SETTING: previous_applied,
+    })
+    return {"success": True, "message": "Junction configLibrary entry applied.", "entryId": entry_id}
+
+
+def _clear_library_config() -> dict:
+    ok, info, message = _library_entry_info()
+    if not ok:
+        return {"success": False, "message": f"Could not read configLibrary metadata: {message}"}
+    meta = info["meta"]
+    entries = list(info["entries"])
+    entry_id = info["id"]
+    entry = info["entry"]
+    saved_settings = app_config.get_settings()
+    saved_id = str(saved_settings.get(JUNCTION_LIBRARY_ENTRY_SETTING) or "").strip()
+    was_active = bool(entry is not None and entry_id and meta.get("appliedId") == entry_id)
+
+    removed = False
+    if entry is not None and entry_id:
+        entries = [
+            item for item in entries
+            if not (
+                isinstance(item, dict)
+                and str(item.get("id") or "") == entry_id
+                and item.get("name") == "Junction"
+            )
+        ]
+        removed = len(entries) != len(info["entries"])
+    if was_active:
+        previous = str(saved_settings.get(JUNCTION_PREVIOUS_APPLIED_SETTING) or "").strip()
+        remaining_ids = {
+            str(item.get("id") or "") for item in entries if isinstance(item, dict)
+        }
+        if previous and previous in remaining_ids:
+            meta["appliedId"] = previous
+        else:
+            meta.pop("appliedId", None)
+
+    changed = removed or (was_active and meta != info["meta"])
+    if changed:
+        meta["entries"] = entries
+        ok, message = _mac_write_json_file(_config_library_meta_path(), meta)
         if not ok:
-            return {"configured": False, "keys": {}, "message": message, "exists": True}
-        keys = _mac_flat_config_status_keys(data)
-        if keys:
-            return {
-                "configured": keys.get("inferenceProvider") == "gateway",
-                "keys": keys,
-                "message": "",
-                "exists": True,
-            }
-    return {"configured": False, "keys": {}, "message": "", "exists": True}
+            return {"success": False, "message": f"Could not update configLibrary metadata: {message}"}
+
+    cleanup_error = ""
+    if removed:
+        try:
+            os.remove(_config_library_entry_path(entry_id))
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            cleanup_error = f"Could not remove orphaned Junction configLibrary file: {exc}"
+
+    if saved_id or saved_settings.get(JUNCTION_PREVIOUS_APPLIED_SETTING):
+        app_config.update_settings({
+            JUNCTION_LIBRARY_ENTRY_SETTING: "",
+            JUNCTION_PREVIOUS_APPLIED_SETTING: "",
+        })
+    if cleanup_error:
+        return {"success": False, "message": cleanup_error}
+    return {
+        "success": True,
+        "message": "Junction configLibrary entry cleared." if removed else "No Junction configLibrary entry was present.",
+        "wasActive": was_active,
+        "remainingEntries": [item for item in entries if isinstance(item, dict)],
+        "removed": removed,
+    }
+
+
+# Compatibility aliases retain the old macOS function names while sharing one safe implementation.
+def _mac_get_library_config_status() -> dict:
+    return _get_library_config_status()
 
 
 def _mac_apply_library_config(
@@ -657,50 +805,15 @@ def _mac_apply_library_config(
     inference_models: str = "",
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
+    chat_tab_enabled: bool = True,
 ) -> dict:
-    ok, paths, message = _mac_config_library_entry_paths(include_missing_active=True)
-    if not ok:
-        return {"success": False, "message": i18n.t("registry.config_lib_read_failed", error=message)}
-    if not paths:
-        library_dir = _mac_config_library_dir_path()
-        os.makedirs(library_dir, exist_ok=True)
-        entry_id = str(uuid.uuid4())
-        meta = {"appliedId": entry_id}
-        ok, message = _mac_write_json_file(_mac_config_library_meta_path(), meta)
-        if not ok:
-            return {"success": False, "message": i18n.t("registry.config_lib_write_failed", error=message)}
-        paths = [_mac_config_library_entry_path(entry_id)]
-
-    expected = _mac_json_enterprise_config(
-        base_url,
-        gateway_api_key,
-        inference_models or DESKTOP_CONFIG["inferenceModels"][0],
-        auth_scheme,
-        gateway_headers,
+    return _apply_library_config(
+        base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers, chat_tab_enabled
     )
-    failures = []
-    for path in paths:
-        ok, data, message = _mac_read_json_file(path)
-        if not ok:
-            failures.append(f"{os.path.basename(path)}: read failed: {message}")
-            continue
-        data.update(expected)
-        ok, message = _mac_write_json_file(path, data)
-        if not ok:
-            failures.append(f"{os.path.basename(path)}: write failed: {message}")
-            continue
 
-        ok, saved, message = _mac_read_json_file(path)
-        if not ok:
-            failures.append(f"{os.path.basename(path)}: readback failed: {message}")
-            continue
-        for name, value in expected.items():
-            if saved.get(name) != value:
-                failures.append(f"{os.path.basename(path)}: {name}: readback mismatch")
 
-    if failures:
-        return {"success": False, "message": i18n.t("registry.config_lib_verify_failed", errors="; ".join(failures))}
-    return {"success": True, "message": i18n.t("registry.config_lib_applied")}
+def _mac_clear_library_config() -> dict:
+    return _clear_library_config()
 
 
 def _mac_apply_json_config(
@@ -710,70 +823,29 @@ def _mac_apply_json_config(
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
 ) -> dict:
-    ok, data, message = _mac_read_json_config()
-    if not ok:
-        return {"success": False, "message": i18n.t("registry.json_read_failed", error=message)}
-
-    expected = _mac_json_enterprise_config(
-        base_url,
-        gateway_api_key,
-        inference_models or DESKTOP_CONFIG["inferenceModels"][0],
-        auth_scheme,
-        gateway_headers,
-    )
-    enterprise_config = data.get("enterpriseConfig")
-    if not isinstance(enterprise_config, dict):
-        enterprise_config = {}
-    enterprise_config.update(expected)
-    data["deploymentMode"] = "3p"
-    data["enterpriseConfig"] = enterprise_config
-
-    ok, message = _mac_write_json_config(data)
-    if not ok:
-        return {"success": False, "message": i18n.t("registry.json_write_failed", error=message)}
-
-    ok, saved, message = _mac_read_json_config()
-    if not ok:
-        return {"success": False, "message": i18n.t("registry.json_readback_failed", error=message)}
-    saved_enterprise = saved.get("enterpriseConfig")
-    if not isinstance(saved_enterprise, dict) or saved.get("deploymentMode") != "3p":
-        return {"success": False, "message": i18n.t("registry.json_verify_mode_failed")}
-    failures = []
-    for name, value in expected.items():
-        if saved_enterprise.get(name) != value:
-            failures.append(f"{name}: readback mismatch")
-    if failures:
-        return {"success": False, "message": i18n.t("registry.json_verify_failed", errors="; ".join(failures))}
-    return {"success": True, "message": i18n.t("registry.json_applied")}
+    """Retain the legacy helper name; Claude's JSON config now changes only deploymentMode."""
+    return _set_deployment_mode("3p")
 
 
 def _mac_get_config_status() -> dict:
     plist_status = _mac_get_plist_config_status()
     json_status = _mac_get_json_config_status()
     library_status = _mac_get_library_config_status()
-    library_has_runtime_config = bool(library_status.get("keys"))
-    json_has_runtime_config = bool(json_status.get("keys"))
-
-    if library_has_runtime_config:
-        keys = dict(library_status.get("keys") or {})
-        configured = library_status.get("configured", False)
+    if library_status.get("keys"):
+        keys = dict(library_status["keys"])
         active_source = "configLibrary"
-        key_sources = {name: "configLibrary" for name in keys}
+        configured = library_status.get("configured", False)
     else:
         keys = dict(plist_status.get("keys") or {})
-        key_sources = {name: "plist" for name in keys}
-        for name, value in (json_status.get("keys") or {}).items():
-            keys[name] = value
-            key_sources[name] = "json"
-        configured = json_status.get("configured", False) if json_has_runtime_config else plist_status.get("configured", False)
-        active_source = "json" if json_has_runtime_config else ("plist" if keys else "")
+        active_source = "plist" if keys else ""
+        configured = plist_status.get("configured", False)
 
     return {
         "configured": configured,
         "keys": keys,
         "message": library_status.get("message") or json_status.get("message") or plist_status.get("message", ""),
         "activeSource": active_source,
-        "keySources": key_sources,
+        "keySources": {name: active_source for name in keys},
         "sources": {
             "plist": plist_status.get("configured", False),
             "json": json_status.get("configured", False),
@@ -788,21 +860,24 @@ def _mac_apply_config(
     inference_models: str = "",
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
+    chat_tab_enabled: bool = True,
 ) -> dict:
-    plist_result = _mac_apply_plist_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
+    library_result = _mac_apply_library_config(
+        base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers, chat_tab_enabled
+    )
     json_result = _mac_apply_json_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
-    library_result = _mac_apply_library_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
-    if plist_result.get("success") and json_result.get("success") and library_result.get("success"):
+    plist_result = _mac_apply_plist_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
+    if library_result.get("success") and json_result.get("success") and plist_result.get("success"):
         return {"success": True, "message": i18n.t("registry.macos_applied")}
 
     failures = []
     write_failed = i18n.t("registry.write_failed_short")
-    if not plist_result.get("success"):
-        failures.append(f"plist: {plist_result.get('message', write_failed)}")
-    if not json_result.get("success"):
-        failures.append(f"json: {json_result.get('message', write_failed)}")
     if not library_result.get("success"):
         failures.append(f"configLibrary: {library_result.get('message', write_failed)}")
+    if not json_result.get("success"):
+        failures.append(f"json: {json_result.get('message', write_failed)}")
+    if not plist_result.get("success"):
+        failures.append(f"plist: {plist_result.get('message', write_failed)}")
     return {"success": False, "message": i18n.t("registry.macos_partial_write_failed", errors="; ".join(failures))}
 
 
@@ -819,69 +894,23 @@ def _mac_clear_plist_config() -> dict:
 
 
 def _mac_clear_json_config() -> dict:
-    ok, data, message = _mac_read_json_config()
-    if not ok:
-        return {"success": False, "message": i18n.t("registry.json_read_failed", error=message)}
-    if not data:
-        return {"success": True, "message": i18n.t("registry.json_missing_no_clear")}
-
-    changed = False
-    if "enterpriseConfig" in data:
-        data.pop("enterpriseConfig", None)
-        changed = True
-    if data.get("deploymentMode") != "clear":
-        data["deploymentMode"] = "clear"
-        changed = True
-    if not changed:
-        return {"success": True, "message": i18n.t("registry.json_no_clear")}
-
-    ok, message = _mac_write_json_config(data)
-    if not ok:
-        return {"success": False, "message": i18n.t("registry.json_write_failed", error=message)}
-    return {"success": True, "message": i18n.t("registry.json_cleared")}
+    """Retain the legacy helper name; only deploymentMode is changed."""
+    return _set_deployment_mode("clear")
 
 
 def _mac_clear_library_config() -> dict:
-    ok, paths, message = _mac_config_library_entry_paths()
-    if not ok:
-        return {"success": False, "message": i18n.t("registry.config_lib_read_failed", error=message)}
-    if not paths:
-        return {"success": True, "message": i18n.t("registry.config_lib_missing_no_clear")}
-
-    managed = set(DESKTOP_CONFIG.keys()) | {
-        "provider",
-        "apiKey",
-        "authScheme",
-        "baseUrl",
-        "models",
-    }
-    failures = []
-    for path in paths:
-        ok, data, message = _mac_read_json_file(path)
-        if not ok:
-            failures.append(f"{os.path.basename(path)}: read failed: {message}")
-            continue
-        changed = False
-        for name in managed:
-            if name in data:
-                data.pop(name, None)
-                changed = True
-        if not changed:
-            continue
-        ok, message = _mac_write_json_file(path, data)
-        if not ok:
-            failures.append(f"{os.path.basename(path)}: write failed: {message}")
-
-    if failures:
-        return {"success": False, "message": i18n.t("registry.config_lib_clear_failed", errors="; ".join(failures))}
-    return {"success": True, "message": i18n.t("registry.config_lib_cleared")}
+    return _clear_library_config()
 
 
 def _mac_clear_config() -> dict:
-    plist_result = _mac_clear_plist_config()
-    json_result = _mac_clear_json_config()
     library_result = _mac_clear_library_config()
-    if plist_result.get("success") and json_result.get("success") and library_result.get("success"):
+    if not library_result.get("success"):
+        return library_result
+    json_result = {"success": True, "message": ""}
+    if library_result.get("wasActive") and not library_result.get("remainingEntries"):
+        json_result = _mac_clear_json_config()
+    plist_result = _mac_clear_plist_config()
+    if plist_result.get("success") and json_result.get("success"):
         return {"success": True, "message": i18n.t("registry.macos_cleared")}
     failures = []
     clear_failed = i18n.t("registry.clear_failed_short")
@@ -889,8 +918,6 @@ def _mac_clear_config() -> dict:
         failures.append(f"plist: {plist_result.get('message', clear_failed)}")
     if not json_result.get("success"):
         failures.append(f"json: {json_result.get('message', clear_failed)}")
-    if not library_result.get("success"):
-        failures.append(f"configLibrary: {library_result.get('message', clear_failed)}")
     return {"success": False, "message": i18n.t("registry.macos_partial_clear_failed", errors="; ".join(failures))}
 
 
@@ -920,14 +947,15 @@ def apply_config(
     expose_all: bool = False,
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
+    chat_tab_enabled: bool = True,
 ) -> dict:
     """Apply Claude Desktop 3P configuration."""
     inference_models = serialize_inference_models(provider, providers=providers, expose_all=expose_all)
     os_name = _os_name()
     if os_name == "win":
-        return _win_apply_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
+        return _win_apply_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers, chat_tab_enabled)
     elif os_name == "mac":
-        return _mac_apply_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
+        return _mac_apply_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers, chat_tab_enabled)
     return _not_supported()
 
 

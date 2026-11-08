@@ -102,6 +102,7 @@ Function un.onInit
 done_uninit:
 FunctionEnd
 
+; Current releases use Claude's configLibrary. Retain this marker-gated cleanup only for legacy installs.
 Function un.ClearClaudePolicy
     ReadRegStr $0 HKCU "${CLAUDE_POLICY_KEY}" "ccds_managed"
     StrCmp $0 "true" 0 done_clear_policy

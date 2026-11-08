@@ -637,6 +637,8 @@ def _desktop_health(
     actual_base_url = str(keys.get("inferenceGatewayBaseUrl") or "").rstrip("/")
     issues = []
     warnings = []
+    for policy_warning in desktop_status.get("policyWarnings", []):
+        issues.append({"code": "external_claude_policy", "message": str(policy_warning)})
 
     if actual_base_url and actual_base_url != expected_base_url:
         issues.append({
@@ -657,7 +659,7 @@ def _desktop_health(
             })
 
     cowork_egress_hosts = _parse_policy_list(keys.get("coworkEgressAllowedHosts"))
-    if keys and "*" not in cowork_egress_hosts:
+    if keys and desktop_status.get("activeSource") != "configLibrary" and "*" not in cowork_egress_hosts:
         issues.append({
             "code": "cowork_egress_hosts_missing",
             "message": i18n.t("health.cowork_egress_missing"),
@@ -746,6 +748,7 @@ def _sync_desktop_for_active_provider() -> dict:
         expose_all=target["exposeAll"],
         auth_scheme=target["authScheme"],
         gateway_headers=target["gatewayHeaders"],
+        chat_tab_enabled=settings.get("chatTabEnabled", True),
     )
     response = {
         "attempted": True,
@@ -1355,6 +1358,7 @@ def create_admin_app() -> FastAPI:
             expose_all=target["exposeAll"],
             auth_scheme=target["authScheme"],
             gateway_headers=target["gatewayHeaders"],
+            chat_tab_enabled=settings.get("chatTabEnabled", True),
         )
         response = {
             **result,
