@@ -5,7 +5,7 @@ chcp 65001 >nul
 :MENU
 cls
 echo ========================================
-echo    Junction v1.0.28 - Build Tool
+echo    Junction v1.0.29 - Build Tool
 echo ========================================
 echo.
 echo  Select a packaging mode:

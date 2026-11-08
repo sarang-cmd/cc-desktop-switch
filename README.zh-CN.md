@@ -70,14 +70,14 @@ v1.0.18 起，Claude Desktop 默认会连接 Junction 的本机 gateway：`127.0
 https://github.com/sarang-cmd/junction/releases/latest
 ```
 
-当前公开的最新版本为 v1.0.27，下载文件仍使用旧的 `CC-Desktop-Switch` 名称以保持兼容。下一版 Junction 构建会使用 `Junction-v<version>` 文件名前缀。
+以下是 v1.0.28 发布文件的命名示例，资产使用 `Junction-v1.0.28` 前缀。
 
 推荐下载：
 
-- `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`：Windows 安装版
-- `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`：Windows 便携版
-- `CC-Desktop-Switch-v1.0.27-macOS-arm64.pkg`：macOS 安装包
-- `CC-Desktop-Switch-v1.0.27-macOS-arm64.dmg`：macOS 拖拽安装包
+- `Junction-v1.0.28-Windows-Setup.exe`：Windows 安装版
+- `Junction-v1.0.28-Windows-Portable.zip`：Windows 便携版
+- `Junction-v1.0.28-macOS-arm64.pkg`：macOS 安装包
+- `Junction-v1.0.28-macOS-arm64.dmg`：macOS 拖拽安装包
 
 Windows 版暂时没有 Authenticode 代码签名证书，系统可能提示未知发布者。Release 页面提供 `.sha256`、`.sig` 和公钥用于校验完整性。
 
