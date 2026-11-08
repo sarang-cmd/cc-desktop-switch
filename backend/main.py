@@ -1,4 +1,4 @@
-"""FastAPI 应用 - 管理 API + 静态文件服务"""
+"""FastAPI application: local management API and static file server."""
 
 import asyncio
 import json
@@ -11,19 +11,19 @@ import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
+from typing import Callable, Optional
 from urllib.parse import urlparse, urlunparse
 
 import httpx
 import uvicorn
-from pathlib import Path
-from typing import Callable, Optional
-
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend import config as cfg
 from backend import ccswitch_import
+from backend import config as cfg
+from backend import i18n
 from backend import provider_tools
 from backend import registry
 from backend import update as updater
@@ -33,12 +33,12 @@ from backend.proxy import (
     build_upstream_url,
     create_proxy_app,
     get_upstream_headers,
-    stats as proxy_stats,
     log_buffer as proxy_logs,
+    stats as proxy_stats,
 )
 
-# ── 路径设置 ──
-# 前端目录: 项目根目录下的 frontend/
+# ── Path Configuration ──
+# Frontend directory: frontend/ under the repository root
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 _update_quit_handler: Optional[Callable[[], None]] = None
 _app_activation_handler: Optional[Callable[[], bool]] = None
@@ -54,17 +54,17 @@ _SENSITIVE_FIELD_RE = re.compile(
 
 
 def get_admin_token() -> str:
-    """返回当前进程的本机管理 API token。"""
+    """Return the local management API token for the current process."""
     return _admin_token
 
 
 def verify_admin_token(value: str) -> bool:
-    """校验本机管理 API token。"""
+    """Verify the local management API token."""
     return bool(value) and secrets.compare_digest(str(value), _admin_token)
 
 
 def _popen_hidden(command: list[str], *, detached: bool = False, show_window: bool = False):
-    """启动外部程序时避免 Windows 弹出黑色终端窗口。"""
+    """Launch an external process without popping up a black console window on Windows."""
     kwargs = {"close_fds": True}
     if detached:
         kwargs["stdin"] = subprocess.DEVNULL
@@ -87,13 +87,13 @@ def _popen_hidden(command: list[str], *, detached: bool = False, show_window: bo
 
 
 def register_update_quit_handler(handler: Optional[Callable[[], None]]):
-    """注册更新安装前用于优雅退出主应用的回调。"""
+    """Register a callback to gracefully quit the main application before launching an update installer."""
     global _update_quit_handler
     _update_quit_handler = handler
 
 
 def register_app_activation_handler(handler: Optional[Callable[[], bool]]):
-    """注册第二次启动时唤起已有窗口的回调。"""
+    """Register a callback to bring the existing window to the foreground on a second launch."""
     global _app_activation_handler
     _app_activation_handler = handler
 
@@ -114,7 +114,7 @@ def _activate_existing_app() -> bool:
 
 
 def _schedule_update_quit_for_install(handler: Callable[[], None], delay: float = 0.8) -> bool:
-    """延迟一点退出主应用，确保前端先收到安装响应。"""
+    """Delay quitting slightly so the frontend receives the installation response first."""
     if not callable(handler):
         return False
 
@@ -131,7 +131,7 @@ def _schedule_update_quit_for_install(handler: Callable[[], None], delay: float 
 
 
 def _launch_update_installer(installer_path: str, platform: str) -> bool:
-    """启动安装器；桌面模式下先退出主程序，再由独立 helper 打开安装包。"""
+    """Launch the installer; in desktop mode, quit the main app first and let the helper open the installer."""
     should_wait_for_quit = platform.startswith(("windows-", "macos-"))
     quit_handler = _get_update_quit_handler() if should_wait_for_quit else None
     if should_wait_for_quit and quit_handler:
@@ -152,7 +152,7 @@ def _launch_update_installer(installer_path: str, platform: str) -> bool:
 
 
 def _public_provider(provider: Optional[dict]) -> Optional[dict]:
-    """返回给前端展示的 provider，避免泄露 API Key。"""
+    """Return a display-safe provider dict without exposing the raw API Key."""
     if not provider:
         return None
     public = dict(provider)
@@ -164,7 +164,7 @@ def _public_provider(provider: Optional[dict]) -> Optional[dict]:
 
 
 def _redact_text(value: str, limit: int = 500) -> str:
-    """脱敏文本，供诊断包和支持信息使用。"""
+    """Redact sensitive tokens from text for diagnostic bundles and support output."""
     text = str(value or "")
     text = re.sub(r"(?i)(bearer\s+)[a-z0-9._~+/=-]{12,}", r"\1******", text)
     text = re.sub(
@@ -192,7 +192,7 @@ def _is_sensitive_field(key: str) -> bool:
 
 
 def _redact_value(value, field_name: str = ""):
-    """递归脱敏诊断输出，避免配置 key 或日志文本泄露。"""
+    """Recursively redact diagnostic output so configuration keys or log tokens never leak."""
     if _is_sensitive_field(field_name):
         if isinstance(value, dict):
             return {str(key): REDACTED if item else "" for key, item in value.items()}
@@ -209,7 +209,7 @@ def _redact_value(value, field_name: str = ""):
 
 
 def _safe_url_parts(url: str) -> dict:
-    """只保留不含凭据和查询参数的 URL 诊断信息。"""
+    """Keep only credential-free and query-free URL diagnostic components."""
     try:
         parsed = urlparse(str(url or ""))
     except Exception:
@@ -224,7 +224,7 @@ def _safe_url_parts(url: str) -> dict:
 
 
 def _normalize_proxy_url(value: str) -> str:
-    """把用户填写的上游代理地址整理成 urlparse 可解析的形式。"""
+    """Normalize a user-supplied upstream proxy URL so urlparse can parse it."""
     text = str(value or "").strip()
     if not text:
         return ""
@@ -247,7 +247,7 @@ def _check_local_proxy_reachable(host: str, port: int) -> bool:
 
 
 def _upstream_proxy_diagnostics(settings: dict) -> dict:
-    """返回不含凭据的上游代理诊断信息。"""
+    """Return credential-free upstream proxy diagnostics."""
     raw_value = str(settings.get("upstreamProxy") or "").strip()
     result = {
         "enabled": bool(settings.get("upstreamProxyEnabled")),
@@ -351,6 +351,17 @@ def _diagnostics_payload() -> dict:
     }
 
 
+def _is_non_json_log_message(message: str) -> bool:
+    text = str(message or "")
+    en_prefix = re.sub(r"[:\s]+$", "", i18n.get_text("proxy.log_non_json_prefix", "en"))
+    zh_prefix = re.sub(r"[\W_]+$", "", i18n.get_text("proxy.log_non_json_prefix", "zh"))
+    return (
+        "invalid_upstream_response" in text
+        or (en_prefix and en_prefix in text)
+        or (zh_prefix and zh_prefix in text)
+    )
+
+
 def _diagnostics_checks(payload: dict) -> list[dict]:
     checks = []
     active_id = payload.get("activeProviderId")
@@ -360,8 +371,7 @@ def _diagnostics_checks(payload: dict) -> list[dict]:
     invalid_upstream_logs = [
         item
         for item in recent_logs
-        if "上游返回非 JSON" in str(item.get("message") or "")
-        or "invalid_upstream_response" in str(item.get("message") or "")
+        if _is_non_json_log_message(str(item.get("message") or ""))
     ]
     recent_error_logs = [
         item
@@ -371,23 +381,23 @@ def _diagnostics_checks(payload: dict) -> list[dict]:
     checks.append({
         "code": "active_provider",
         "ok": bool(active),
-        "message": "已选择默认 provider" if active else "尚未选择默认 provider",
+        "message": i18n.t("diag.active_provider_ok") if active else i18n.t("diag.active_provider_missing"),
     })
     checks.append({
         "code": "active_provider_api_key",
         "ok": bool(active and active.get("hasApiKey")),
-        "message": "默认 provider 已保存 API Key" if active and active.get("hasApiKey") else "默认 provider 缺少 API Key",
+        "message": i18n.t("diag.api_key_ok") if active and active.get("hasApiKey") else i18n.t("diag.api_key_missing"),
     })
     checks.append({
         "code": "desktop_config",
         "ok": bool(payload.get("desktop", {}).get("configured")),
-        "message": "Claude Desktop 配置由本工具管理" if payload.get("desktop", {}).get("configured") else "Claude Desktop 尚未配置或不是由本工具管理",
+        "message": i18n.t("diag.desktop_managed_ok") if payload.get("desktop", {}).get("configured") else i18n.t("diag.desktop_managed_no"),
     })
     health = payload.get("desktop", {}).get("health") or {}
     checks.append({
         "code": "desktop_health",
         "ok": not bool(health.get("needsApply")),
-        "message": "桌面版配置与当前 provider 一致" if not health.get("needsApply") else "桌面版配置需要重新应用",
+        "message": i18n.t("diag.desktop_sync_ok") if not health.get("needsApply") else i18n.t("diag.desktop_sync_needs_apply"),
         "issues": health.get("issues") or [],
     })
     helper_warnings = [
@@ -400,12 +410,12 @@ def _diagnostics_checks(payload: dict) -> list[dict]:
             "code": "claude_code_helper",
             "ok": True,
             "level": "info",
-            "message": helper_warnings[0].get("message") or "Claude Desktop 本地 helper 不可用",
+            "message": helper_warnings[0].get("message") or i18n.t("diag.helper_unavailable"),
         })
     checks.append({
         "code": "local_gateway",
         "ok": bool(payload.get("proxy", {}).get("running")),
-        "message": "本机 gateway 正在运行" if payload.get("proxy", {}).get("running") else "本机 gateway 未运行",
+        "message": i18n.t("diag.gateway_running") if payload.get("proxy", {}).get("running") else i18n.t("diag.gateway_stopped"),
     })
     upstream_proxy = payload.get("settings", {}).get("upstreamProxy") or {}
     if (
@@ -419,10 +429,7 @@ def _diagnostics_checks(payload: dict) -> list[dict]:
         checks.append({
             "code": "upstream_proxy_unreachable",
             "ok": False,
-            "message": (
-                f"上游代理已开启，但 {host}:{port} 不可连接。"
-                "请启动该代理，或在设置里关闭上游代理后重试。"
-            ),
+            "message": i18n.t("diag.upstream_proxy_unreachable", host=host, port=port),
             "host": host,
             "port": port,
         })
@@ -430,14 +437,14 @@ def _diagnostics_checks(payload: dict) -> list[dict]:
         checks.append({
             "code": "upstream_response",
             "ok": False,
-            "message": "最近转发日志显示上游返回了 HTML/非 JSON 响应，请检查 API 地址、API 格式、鉴权或中转防护页面。",
+            "message": i18n.t("diag.upstream_non_json"),
             "count": len(invalid_upstream_logs),
         })
     elif recent_error_logs:
         checks.append({
             "code": "proxy_recent_errors",
             "ok": False,
-            "message": "最近转发日志中存在错误记录，请打开转发状态查看详情；如果已处理，可先清除日志后重新运行诊断。",
+            "message": i18n.t("diag.recent_error_logs"),
             "count": len(recent_error_logs),
         })
     return checks
@@ -446,12 +453,12 @@ def _diagnostics_checks(payload: dict) -> list[dict]:
 def _provider_not_found():
     return JSONResponse(
         status_code=404,
-        content={"success": False, "message": "提供商不存在"},
+        content={"success": False, "message": i18n.t("admin.provider_not_found")},
     )
 
 
 def _parse_inference_models(raw_value: str) -> list:
-    """解析 Desktop managed policy 中的 inferenceModels。"""
+    """Parse inferenceModels from the Claude Desktop managed policy."""
     try:
         parsed = json.loads(raw_value or "[]")
     except (TypeError, ValueError):
@@ -460,7 +467,7 @@ def _parse_inference_models(raw_value: str) -> list:
 
 
 def _parse_policy_list(value) -> list[str]:
-    """解析 Desktop JSON string / JSON array 类型的 policy 列表。"""
+    """Parse a JSON string or JSON array policy list."""
     if isinstance(value, list):
         parsed = value
     else:
@@ -474,7 +481,7 @@ def _parse_policy_list(value) -> list[str]:
 
 
 def _policy_enabled(value) -> bool:
-    """把 Desktop policy 里的 bool/int/string 统一判断为开启。"""
+    """Return True if a bool/int/string policy value represents an enabled flag."""
     if isinstance(value, bool):
         return value
     if isinstance(value, int):
@@ -483,7 +490,7 @@ def _policy_enabled(value) -> bool:
 
 
 def _claude_code_helper_candidates() -> list[Path]:
-    """返回 Claude Desktop 3P helper 可能所在位置。"""
+    """Return candidate paths where the Claude Desktop 3P helper binary may reside."""
     override = os.environ.get("CCDS_CLAUDE_CODE_HELPER_PATHS", "").strip()
     if override:
         return [Path(item) for item in override.split(os.pathsep) if item.strip()]
@@ -512,7 +519,7 @@ def _claude_code_helper_status(keys: dict) -> dict:
 
 
 def _inference_model_names(items: list) -> list[str]:
-    """提取 Desktop inferenceModels 里的模型名称。"""
+    """Extract model names from Desktop inferenceModels items."""
     names = []
     for item in items:
         if isinstance(item, dict):
@@ -531,7 +538,7 @@ def _raw_desktop_model_names(
     providers: Optional[list[dict]],
     target_models: Optional[list] = None,
 ) -> list[str]:
-    """识别旧版本写入的真实上游模型名。"""
+    """Identify raw upstream model names written by older versions."""
     suspicious_tokens = (
         "deepseek",
         "kimi",
@@ -563,7 +570,7 @@ def _raw_desktop_model_names(
 
 
 def _stale_desktop_route_names(names: list[str], target_models: list) -> list[str]:
-    """识别旧配置里残留的未映射 Claude-safe route。"""
+    """Identify unmapped Claude-safe routes left over from previous configurations."""
     allowed = {
         str(item.get("name"))
         for item in target_models
@@ -578,10 +585,10 @@ def _stale_desktop_route_names(names: list[str], target_models: list) -> list[st
 
 
 def _no_desktop_model_routes_response(target: dict, proxy_port: int, *, attempted: bool = False) -> dict:
-    """生成没有显式模型映射时的失败响应。"""
+    """Build the failure response when no explicit model slots are mapped."""
     response = {
         "success": False,
-        "message": "请至少映射一个 Claude 模型槽位后再应用到 Claude 桌面版。",
+        "message": i18n.t("admin.map_at_least_one_slot"),
         "mode": target["mode"],
         "requiresProxy": target["requiresProxy"],
         "proxyStarted": False,
@@ -594,10 +601,10 @@ def _no_desktop_model_routes_response(target: dict, proxy_port: int, *, attempte
 
 
 def desktop_config_target_for_provider(provider: Optional[dict], settings: Optional[dict] = None) -> dict:
-    """生成 Claude Desktop 写入目标。
+    """Build the target configuration to write into Claude Desktop.
 
-    v1.0.18 起默认写入本机转发地址。这样所有第三方 provider 都走同一条
-    代理链，模型映射、额外请求头和协议转换逻辑统一由后台处理。
+    Since v1.0.18, Claude Desktop always points to the local forwarding address so that
+    model mapping, extra headers, and protocol conversion are handled uniformly.
     """
     settings = settings or cfg.get_settings()
     proxy_port = settings.get("proxyPort", 18080)
@@ -621,7 +628,7 @@ def _desktop_health(
     providers: Optional[list[dict]] = None,
     expose_all: bool = False,
 ) -> dict:
-    """判断 Claude Desktop 配置是否仍指向本工具当前 provider。"""
+    """Evaluate whether the Claude Desktop configuration matches the current provider."""
     keys = desktop_status.get("keys") or {}
     settings = dict(cfg.get_settings())
     settings["proxyPort"] = proxy_port
@@ -634,26 +641,26 @@ def _desktop_health(
     if actual_base_url and actual_base_url != expected_base_url:
         issues.append({
             "code": "gateway_base_url_mismatch",
-            "message": "Claude 桌面版仍指向旧地址，请重新一键应用到 Claude 桌面版。",
+            "message": i18n.t("health.gateway_url_mismatch"),
         })
 
     if desktop_status.get("configured") is False:
         if keys:
             issues.append({
                 "code": "not_managed_by_ccds",
-                "message": "当前桌面版配置不是由本工具最新版本写入。",
+                "message": i18n.t("health.not_managed_by_latest"),
             })
         else:
             issues.append({
                 "code": "desktop_not_configured",
-                "message": "桌面版尚未配置，请添加提供商并一键应用到 Claude 桌面版。",
+                "message": i18n.t("health.not_configured"),
             })
 
     cowork_egress_hosts = _parse_policy_list(keys.get("coworkEgressAllowedHosts"))
     if keys and "*" not in cowork_egress_hosts:
         issues.append({
             "code": "cowork_egress_hosts_missing",
-            "message": "Claude Cowork 网页访问放行规则尚未写入，请重新一键应用并重启 Claude 桌面版。",
+            "message": i18n.t("health.cowork_egress_missing"),
         })
 
     helper_status = _claude_code_helper_status(keys)
@@ -663,11 +670,7 @@ def _desktop_health(
             "severity": "info",
             "diagnosticOnly": True,
             "checked": helper_status.get("checked", 0),
-            "message": (
-                "Claude Desktop 的本地 Claude Code helper 尚未下载完成或被安全软件拦截。"
-                "如果桌面端提示 Host Claude Code binary not available，请检查 downloads.claude.ai 网络访问、"
-                "Claude Desktop 下载状态和系统安全策略。"
-            ),
+            "message": i18n.t("health.claude_code_helper_missing"),
         })
 
     inference_models = _parse_inference_models(str(keys.get("inferenceModels") or ""))
@@ -677,14 +680,14 @@ def _desktop_health(
     if raw_model_names:
         issues.append({
             "code": "invalid_inference_model_names",
-            "message": "Claude 桌面版配置里仍有第三方真实模型名，请重新一键应用到 Claude 桌面版。",
+            "message": i18n.t("health.legacy_real_models_exposed"),
             "models": raw_model_names,
         })
     stale_route_names = _stale_desktop_route_names(inference_model_names, target_models)
     if stale_route_names:
         issues.append({
             "code": "stale_inference_model_routes",
-            "message": "Claude 桌面版配置里仍有未映射模型入口，请重新一键应用并重启 Claude 桌面版。",
+            "message": i18n.t("health.unmapped_routes_exposed"),
             "models": stale_route_names,
         })
     one_million_models = [
@@ -707,7 +710,7 @@ def _desktop_health(
         if not one_million_ready:
             issues.append({
                 "code": "one_million_not_written",
-                "message": "Claude Desktop 模型菜单的 1M 标记尚未写入或未被读回；后台转发可能已路由到 1M 模型，请重新一键应用并重启 Claude 桌面版。",
+                "message": i18n.t("health.model_1m_capability_mismatch"),
                 "models": one_million_models,
                 "writtenModels": sorted(written_one_million),
             })
@@ -725,10 +728,10 @@ def _desktop_health(
 
 
 def _sync_desktop_for_active_provider() -> dict:
-    """默认 provider 切换后，同步本工具管理的 Claude 桌面版模型列表。"""
+    """Sync the Claude Desktop model list managed by this tool when the active provider changes."""
     provider = cfg.get_active_provider()
     if not provider:
-        return {"attempted": False, "success": False, "message": "没有默认提供商"}
+        return {"attempted": False, "success": False, "message": i18n.t("admin.no_default_provider")}
 
     settings = cfg.get_settings()
     target = desktop_config_target_for_provider(provider, settings)
@@ -758,10 +761,7 @@ def _sync_desktop_for_active_provider() -> dict:
         response["proxyStarted"] = bool(proxy_started)
         if not proxy_started:
             response["success"] = False
-            response["message"] = (
-                "桌面版配置已写入，但本机转发服务启动失败。"
-                "请检查转发端口是否被占用，或在设置中更换转发端口后重试。"
-            )
+            response["message"] = i18n.t("admin.desktop_written_proxy_failed")
     elif result.get("success"):
         response["proxyStarted"] = bool(_proxy_running)
     return response
@@ -791,20 +791,20 @@ def _provider_test_body(provider: dict, api_format: str) -> dict:
 
 
 def _is_kimi_provider(provider: dict) -> bool:
-    """粗略识别 Kimi provider，用于给出更具体的排错提示。"""
+    """Roughly identify a Kimi provider to give specific troubleshooting guidance."""
     probe = f"{provider.get('name', '')} {provider.get('baseUrl', '')}".lower()
     return "kimi" in probe or "moonshot" in probe
 
 
 async def _test_provider_connection(provider: dict) -> dict:
-    """测试 provider 是否能真实访问上游接口。"""
+    """Test whether a provider can reach its upstream endpoint."""
     api_format = normalize_api_format(provider.get("apiFormat", "anthropic"))
     base_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
     parsed = urlparse(base_url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return {
             "success": False,
-            "message": "API 地址无效",
+            "message": i18n.t("provider_tools.invalid_base_url"),
         }
 
     headers = get_upstream_headers(provider)
@@ -829,29 +829,25 @@ async def _test_provider_connection(provider: dict) -> dict:
             "success": True,
             "ok": False,
             "latencyMs": latency_ms,
-            "message": f"连接失败：{exc.__class__.__name__}",
+            "message": i18n.t("conn.connect_failed", error=exc.__class__.__name__),
         }
 
     latency_ms = round((time.perf_counter() - started) * 1000)
     status_code = response.status_code
     reachable = status_code < 500
     if 200 <= status_code < 300:
-        message = f"连接正常，{latency_ms} ms"
+        message = i18n.t("conn.ok", latency=latency_ms)
     elif status_code in {401, 403}:
         reachable = False
         if _is_kimi_provider(provider):
-            message = (
-                f"Kimi 认证失败，HTTP {status_code}。Kimi Platform Key 请使用 "
-                f"https://api.moonshot.cn/anthropic；Kimi Code 会员 Key 请使用 "
-                f"https://api.kimi.com/coding，{latency_ms} ms"
-            )
+            message = i18n.t("conn.kimi_auth_failed", status=status_code, latency=latency_ms)
         else:
-            message = f"认证失败，HTTP {status_code}，请检查 API Key 和 API 地址是否匹配，{latency_ms} ms"
+            message = i18n.t("conn.auth_failed", status=status_code, latency=latency_ms)
     elif status_code in {404, 405}:
         reachable = False
-        message = f"接口不可用，HTTP {status_code}，请检查 API 地址是否填到了兼容 Claude 的接口，{latency_ms} ms"
+        message = i18n.t("conn.endpoint_unavailable", status=status_code, latency=latency_ms)
     else:
-        message = f"地址可达，HTTP {status_code}，{latency_ms} ms"
+        message = i18n.t("conn.reachable", status=status_code, latency=latency_ms)
 
     return {
         "success": True,
@@ -863,7 +859,7 @@ async def _test_provider_connection(provider: dict) -> dict:
 
 
 def _provider_compatibility(provider: dict) -> dict:
-    """返回 provider 第三方接口兼容性摘要，不发起网络请求。"""
+    """Return a third-party protocol compatibility summary without making network requests."""
     api_format = normalize_api_format(provider.get("apiFormat", "anthropic"))
     if api_format == "anthropic":
         return {
@@ -871,7 +867,7 @@ def _provider_compatibility(provider: dict) -> dict:
             "name": provider.get("name"),
             "apiFormat": api_format,
             "level": "stable",
-            "message": "Anthropic 兼容接口，适合 Claude 桌面版主流程。",
+            "message": i18n.t("compat.anthropic_summary"),
             "checks": {
                 "models": True,
                 "text": True,
@@ -886,7 +882,7 @@ def _provider_compatibility(provider: dict) -> dict:
             "name": provider.get("name"),
             "apiFormat": api_format,
             "level": "experimental",
-            "message": "OpenAI Chat 实验适配：文本和非流式工具调用可测试，流式工具调用暂不作为稳定能力。",
+            "message": i18n.t("compat.openai_summary"),
             "checks": {
                 "models": True,
                 "text": True,
@@ -900,7 +896,7 @@ def _provider_compatibility(provider: dict) -> dict:
         "name": provider.get("name"),
         "apiFormat": api_format,
         "level": "unsupported",
-        "message": f"{api_format} 暂未适配。",
+        "message": i18n.t("compat.unsupported_summary", format=api_format),
         "checks": {
             "models": False,
             "text": False,
@@ -912,18 +908,16 @@ def _provider_compatibility(provider: dict) -> dict:
 
 
 async def _detect_local_proxy() -> Optional[str]:
-    """尝试自动检测本地代理端口。先检查环境变量，再扫描常见端口。"""
-    # 1. 优先读取环境变量
+    """Auto-detect a local proxy port by checking environment variables first, then common ports."""
     for env in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"):
         val = os.environ.get(env, os.environ.get(env.lower(), "")).strip()
         if val:
             return val
 
-    # 2. 扫描常见本地代理端口
     common_ports = [
         7890,   # Clash / ClashX / Clash Verge (HTTP)
         7897,   # Clash Verge Rev
-        7891,   # Clash (SOCKS，部分版本同时开 HTTP)
+        7891,   # Clash (SOCKS / HTTP)
         6152,   # Surge (HTTP)
         6153,   # Surge (SOCKS)
         1080,   # Shadowsocks / SSR / v2rayN (SOCKS)
@@ -950,12 +944,12 @@ async def _detect_local_proxy() -> Optional[str]:
 
 
 def create_admin_app() -> FastAPI:
-    """创建管理后台 FastAPI 应用"""
+    """Create the admin FastAPI application."""
     app = FastAPI(title="CC Desktop Switch Admin", version="1.0.26")
 
     @app.middleware("http")
     async def require_local_admin_auth(request: Request, call_next):
-        """保护本机管理 API，避免普通网页读取或触发敏感操作。"""
+        """Protect the local management API from cross-site browser access."""
         path = request.url.path
         if path == "/api/ready":
             return await call_next(request)
@@ -980,13 +974,13 @@ def create_admin_app() -> FastAPI:
 
     @app.get("/api/ready")
     async def ready():
-        """公开最小探活端点，不返回本机配置。"""
+        """Public liveness endpoint that returns no local configuration."""
         return {"success": True, "ready": True}
 
-    # ── 状态 API ──
+    # ── Status API ──
     @app.get("/api/status")
     async def get_status():
-        """获取全局状态"""
+        """Get global application status."""
         providers = cfg.get_providers()
         active = cfg.get_active_provider()
         desktop_status = registry.get_config_status()
@@ -1010,14 +1004,14 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/app/activate")
     async def activate_app():
-        """第二次启动时由新进程调用，用于把已有窗口带回前台。"""
+        """Called by a second process launch to bring the existing window to the foreground."""
         handled = _activate_existing_app()
         return {"success": True, "handled": handled}
 
-    # ── 提供商 API ──
+    # ── Providers API ──
     @app.get("/api/providers")
     async def list_providers():
-        """获取所有提供商"""
+        """Get all configured providers."""
         providers = [_public_provider(p) for p in cfg.get_providers()]
         active_id = cfg.load_config().get("activeProvider")
         return {
@@ -1027,24 +1021,24 @@ def create_admin_app() -> FastAPI:
 
     @app.put("/api/providers/reorder")
     async def reorder_providers(request: Request):
-        """保存拖动后的 provider 顺序。"""
+        """Save the reordered list of provider IDs."""
         data = await request.json()
         provider_ids = data.get("providerIds", [])
         if not isinstance(provider_ids, list) or not all(isinstance(item, str) for item in provider_ids):
             return JSONResponse(
                 status_code=400,
-                content={"success": False, "message": "providerIds 必须是字符串数组"},
+                content={"success": False, "message": i18n.t("admin.provider_ids_must_be_array")},
             )
         if cfg.reorder_providers(provider_ids):
             return {"success": True, "providers": [_public_provider(p) for p in cfg.get_providers()]}
         return JSONResponse(
             status_code=400,
-            content={"success": False, "message": "provider 排序保存失败"},
+            content={"success": False, "message": i18n.t("admin.reorder_failed")},
         )
 
     @app.get("/api/providers/{provider_id}/secret")
     async def get_provider_secret(provider_id: str):
-        """读取已保存的 Provider API Key，仅允许本机前端调用。"""
+        """Read the saved API Key for a provider (local frontend only)."""
         provider = cfg.get_provider(provider_id)
         if not provider:
             return _provider_not_found()
@@ -1052,48 +1046,39 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/providers")
     async def create_provider(request: Request):
-        """添加提供商"""
+        """Add a new provider."""
         data = await request.json()
         provider = cfg.add_provider(data)
         return {"success": True, "provider": _public_provider(provider)}
 
     @app.put("/api/providers/{provider_id}")
     async def edit_provider(provider_id: str, request: Request):
-        """编辑提供商"""
+        """Edit an existing provider."""
         data = await request.json()
         result = cfg.update_provider(provider_id, data)
         if result:
             return {"success": True, "provider": _public_provider(result)}
-        return JSONResponse(
-            status_code=404,
-            content={"success": False, "message": "提供商不存在"},
-        )
+        return _provider_not_found()
 
     @app.post("/api/providers/{provider_id}/models/{model}/check")
     async def check_provider_model(provider_id: str, model: str):
-        """检测指定模型是否可用（通过最小对话请求）"""
+        """Check whether a specific model is available via a minimal chat completion request."""
         provider = cfg.get_provider(provider_id)
         if not provider:
-            return JSONResponse(
-                status_code=404,
-                content={"success": False, "message": "提供商不存在"},
-            )
+            return _provider_not_found()
         result = await provider_tools.check_model_available(provider, model)
         return {"success": True, **result}
 
     @app.delete("/api/providers/{provider_id}")
     async def remove_provider(provider_id: str):
-        """删除提供商"""
+        """Delete a provider."""
         if cfg.delete_provider(provider_id):
-            return {"success": True, "message": "已删除"}
-        return JSONResponse(
-            status_code=404,
-            content={"success": False, "message": "提供商不存在"},
-        )
+            return {"success": True, "message": i18n.t("admin.deleted")}
+        return _provider_not_found()
 
     @app.put("/api/providers/{provider_id}/default")
     async def set_default_provider(provider_id: str):
-        """设为默认"""
+        """Set the active default provider."""
         if cfg.set_active_provider(provider_id):
             try:
                 desktop_sync = _sync_desktop_for_active_provider()
@@ -1101,34 +1086,31 @@ def create_admin_app() -> FastAPI:
                 desktop_sync = {
                     "attempted": True,
                     "success": False,
-                    "message": f"桌面版模型同步失败: {exc}",
+                    "message": i18n.t("admin.desktop_sync_failed", error=exc),
                 }
             return {
                 "success": True,
-                "message": "默认提供商已更新",
+                "message": i18n.t("admin.default_updated"),
                 "desktopSync": desktop_sync,
             }
-        return JSONResponse(
-            status_code=404,
-            content={"success": False, "message": "提供商不存在"},
-        )
+        return _provider_not_found()
 
     @app.post("/api/providers/test")
     async def test_provider_payload(request: Request):
-        """测试表单中尚未保存的 provider 连接。"""
+        """Test connectivity for an unsaved provider payload from the form."""
         data = await request.json()
         return await _test_provider_connection(data)
 
     @app.post("/api/providers/detect-format")
     async def detect_provider_format(request: Request):
-        """探测第三方 API 的协议类型。"""
+        """Detect the upstream API protocol format."""
         data = await request.json()
         base_url = str(data.get("baseUrl") or "").strip()
         api_key = str(data.get("apiKey") or "").strip()
         if not base_url:
             return JSONResponse(
                 status_code=400,
-                content={"success": False, "message": "请填写 Base URL"},
+                content={"success": False, "message": i18n.t("provider_tools.enter_base_url")},
             )
         result = await provider_tools.detect_api_format(base_url, api_key)
         if result.get("success"):
@@ -1140,7 +1122,7 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/providers/models/available")
     async def get_available_models_from_payload(request: Request):
-        """自动获取表单中尚未保存的 provider 模型列表。"""
+        """Fetch available models for an unsaved provider payload from the form."""
         data = await request.json()
         result = await provider_tools.fetch_provider_models(data)
         if result.get("success"):
@@ -1149,18 +1131,15 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/providers/{provider_id}/test")
     async def test_saved_provider(provider_id: str):
-        """测试已保存 provider 的连接延迟。"""
+        """Test connectivity and latency for a saved provider."""
         for provider in cfg.get_providers():
             if provider["id"] == provider_id:
                 return await _test_provider_connection(provider)
-        return JSONResponse(
-            status_code=404,
-            content={"success": False, "message": "提供商不存在"},
-        )
+        return _provider_not_found()
 
     @app.post("/api/providers/{provider_id}/usage")
     async def query_provider_usage(provider_id: str):
-        """查询提供商余额/用量。"""
+        """Query balance/usage for a saved provider."""
         provider = cfg.get_provider(provider_id)
         if not provider:
             return _provider_not_found()
@@ -1168,7 +1147,7 @@ def create_admin_app() -> FastAPI:
 
     @app.get("/api/providers/compatibility")
     async def provider_compatibility_report():
-        """查看已保存 provider 的第三方接口兼容性摘要。"""
+        """Return third-party API compatibility summaries for all saved providers."""
         providers = [_provider_compatibility(provider) for provider in cfg.get_providers()]
         return {
             "success": True,
@@ -1176,22 +1155,19 @@ def create_admin_app() -> FastAPI:
             "experimentalCount": len([item for item in providers if item["level"] == "experimental"]),
         }
 
-    # ── 模型映射 API ──
+    # ── Model Mapping API ──
     @app.get("/api/providers/{provider_id}/models")
     async def get_models(provider_id: str):
-        """获取模型映射"""
+        """Get model mappings for a provider."""
         providers = cfg.get_providers()
         for p in providers:
             if p["id"] == provider_id:
                 return {"models": p.get("models", {})}
-        return JSONResponse(
-            status_code=404,
-            content={"success": False, "message": "提供商不存在"},
-        )
+        return _provider_not_found()
 
     @app.get("/api/providers/{provider_id}/models/available")
     async def get_available_models(provider_id: str):
-        """自动获取 provider 支持的模型列表。"""
+        """Fetch available models supported by a saved provider."""
         provider = cfg.get_provider(provider_id)
         if not provider:
             return _provider_not_found()
@@ -1202,7 +1178,7 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/providers/{provider_id}/models/autofill")
     async def autofill_models(provider_id: str):
-        """自动获取模型列表并写入推荐模型映射。"""
+        """Fetch available models and save suggested slot mappings."""
         provider = cfg.get_provider(provider_id)
         if not provider:
             return _provider_not_found()
@@ -1215,40 +1191,37 @@ def create_admin_app() -> FastAPI:
                 "models": result.get("models", []),
                 "suggested": result.get("suggested", {}),
                 "endpoint": result.get("endpoint"),
-                "message": "模型映射已自动填充",
+                "message": i18n.t("admin.models_autofilled"),
             }
         return _provider_not_found()
 
     @app.put("/api/providers/{provider_id}/models")
     async def save_models(provider_id: str, request: Request):
-        """保存模型映射"""
+        """Save model mappings for a provider."""
         data = await request.json()
         if cfg.update_models(provider_id, data.get("models", {})):
-            return {"success": True, "message": "模型映射已保存"}
-        return JSONResponse(
-            status_code=404,
-            content={"success": False, "message": "提供商不存在"},
-        )
+            return {"success": True, "message": i18n.t("admin.models_saved")}
+        return _provider_not_found()
 
-    # ── 配置备份 / 导入导出 API ──
+    # ── Backup / Import / Export API ──
     @app.post("/api/config/backup")
     async def create_config_backup():
-        """手动创建配置备份。"""
+        """Manually create a configuration backup."""
         return {"success": True, "backup": cfg.create_backup("manual")}
 
     @app.get("/api/config/backups")
     async def list_config_backups():
-        """列出配置备份。"""
+        """List configuration backups."""
         return {"backups": cfg.list_backups()}
 
     @app.get("/api/config/export")
     async def export_config():
-        """导出完整配置。会包含 API Key，仅供用户本机下载保存。"""
+        """Export full configuration (includes API Keys, for local backup only)."""
         return cfg.export_config()
 
     @app.post("/api/config/import")
     async def import_config(request: Request):
-        """导入完整配置。导入前自动备份当前配置。"""
+        """Import full configuration after automatically backing up current configuration."""
         try:
             data = await request.json()
             result = cfg.import_config(data)
@@ -1259,14 +1232,14 @@ def create_admin_app() -> FastAPI:
             )
         return {
             "success": True,
-            "message": "配置已导入",
+            "message": i18n.t("admin.config_imported"),
             "backup": result["backup"],
         }
 
-    # ── 诊断 API ──
+    # ── Diagnostics API ──
     @app.get("/api/diagnostics/summary")
     async def diagnostics_summary():
-        """返回可展示的脱敏诊断摘要。"""
+        """Return a redacted diagnostic summary."""
         payload = _diagnostics_payload()
         return {
             "success": True,
@@ -1286,13 +1259,13 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/diagnostics/export")
     async def diagnostics_export():
-        """导出可发给维护者的脱敏诊断包。"""
+        """Export a redacted diagnostic bundle safe to share with maintainers."""
         payload = _diagnostics_payload()
         return {"success": True, "format": payload["format"], "diagnostics": payload}
 
     @app.post("/api/diagnostics/check")
     async def diagnostics_check():
-        """执行本机配置状态检查。"""
+        """Run local configuration and gateway health checks."""
         payload = _diagnostics_payload()
         checks = _diagnostics_checks(payload)
         return {
@@ -1302,15 +1275,15 @@ def create_admin_app() -> FastAPI:
             "checks": checks,
         }
 
-    # ── CC-Switch 导入 API ──
+    # ── CC-Switch Import API ──
     @app.get("/api/ccswitch/status")
     async def get_ccswitch_status():
-        """检测本机 CC-Switch 配置。不会返回 API Key。"""
+        """Detect local CC-Switch configuration without returning API Keys."""
         return {"success": True, **ccswitch_import.status()}
 
     @app.get("/api/ccswitch/providers")
     async def get_ccswitch_providers():
-        """预览可从 CC-Switch 导入的 Claude provider。API Key 只返回掩码。"""
+        """Preview Claude providers importable from CC-Switch (API Keys are masked)."""
         try:
             providers = ccswitch_import.read_providers()
         except ccswitch_import.CcSwitchImportError as exc:
@@ -1327,7 +1300,7 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/ccswitch/import")
     async def import_ccswitch_providers(request: Request):
-        """把 CC-Switch 的 Anthropic 兼容 provider 导入本工具。"""
+        """Import Anthropic-compatible providers from CC-Switch."""
         data = await request.json() if request.headers.get("content-type") == "application/json" else {}
         try:
             result = ccswitch_import.import_providers(
@@ -1341,14 +1314,14 @@ def create_admin_app() -> FastAPI:
             )
         return {
             "success": True,
-            "message": f"已导入 {len(result['imported'])} 个 CC-Switch 配置",
+            "message": i18n.t("admin.ccswitch_imported", count=len(result["imported"])),
             **result,
         }
 
-    # ── Desktop 集成 API ──
+    # ── Desktop Integration API ──
     @app.get("/api/desktop/status")
     async def get_desktop_status():
-        """获取 Desktop 注册表配置状态"""
+        """Get Claude Desktop registry/plist configuration status."""
         status = registry.get_config_status()
         settings = cfg.get_settings()
         proxy_port = settings.get("proxyPort", 18080)
@@ -1363,7 +1336,7 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/desktop/configure")
     async def apply_desktop_config(request: Request):
-        """应用 Desktop 配置到注册表"""
+        """Apply Claude Desktop configuration to registry/plist."""
         data = await request.json() if request.headers.get("content-type") == "application/json" else {}
         active_provider = cfg.get_active_provider()
         settings = cfg.get_settings()
@@ -1396,23 +1369,20 @@ def create_admin_app() -> FastAPI:
             response["proxyStarted"] = bool(proxy_started)
             if not proxy_started:
                 response["success"] = False
-                response["message"] = (
-                    "桌面版配置已写入，但本机转发服务启动失败。"
-                    "请检查转发端口是否被占用，或在设置中更换转发端口后重试。"
-                )
+                response["message"] = i18n.t("admin.desktop_written_proxy_failed")
         elif result.get("success"):
             response["proxyStarted"] = bool(_proxy_running)
         return response
 
     @app.post("/api/desktop/clear")
     async def clear_desktop_config():
-        """清除 Desktop 注册表配置"""
+        """Clear Claude Desktop registry/plist configuration."""
         return registry.clear_config()
 
-    # ── 代理 API ──
+    # ── Proxy API ──
     @app.get("/api/proxy/status")
     async def get_proxy_status():
-        """获取代理状态"""
+        """Get forwarding service status."""
         return {
             "running": _proxy_running,
             "port": _proxy_port or cfg.get_settings().get("proxyPort", 18080),
@@ -1421,7 +1391,7 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/proxy/start")
     async def start_proxy(request: Request):
-        """启动代理"""
+        """Start forwarding service."""
         global _proxy_running
         data = await request.json() if request.headers.get("content-type") == "application/json" else {}
         requested_port = data.get("port")
@@ -1432,62 +1402,66 @@ def create_admin_app() -> FastAPI:
         healthy_before = _proxy_server_accepting(port)
         success = _start_proxy_server(port)
         if success:
-            message = "代理已在运行中" if healthy_before else f"代理已启动，端口: {port}"
+            message = (
+                i18n.t("admin.proxy_already_running")
+                if healthy_before
+                else i18n.t("admin.proxy_started_on_port", port=port)
+            )
             return {"success": True, "message": message, "port": port}
         return JSONResponse(
             status_code=500,
-            content={"success": False, "message": "代理启动失败"},
+            content={"success": False, "message": i18n.t("admin.proxy_start_failed")},
         )
 
     @app.post("/api/proxy/stop")
     async def stop_proxy():
-        """停止代理"""
+        """Stop forwarding service."""
         global _proxy_running
         if not _proxy_running:
-            return {"success": True, "message": "代理未在运行"}
+            return {"success": True, "message": i18n.t("admin.proxy_not_running")}
 
         _stop_proxy_server()
-        return {"success": True, "message": "代理已停止"}
+        return {"success": True, "message": i18n.t("admin.proxy_stopped")}
 
     @app.get("/api/proxy/logs")
     async def get_proxy_logs():
-        """获取代理日志"""
+        """Get forwarding service logs."""
         return {"logs": proxy_logs.get_all()}
 
     @app.post("/api/proxy/logs/clear")
     async def clear_proxy_logs():
-        """清除代理日志"""
+        """Clear forwarding service logs."""
         proxy_logs.clear()
         return {"success": True}
 
-    # ── 设置 API ──
+    # ── Settings API ──
     @app.get("/api/settings")
     async def get_settings():
-        """获取设置"""
+        """Get application settings."""
         return cfg.get_settings()
 
     @app.put("/api/settings")
     async def save_settings(request: Request):
-        """保存设置"""
+        """Save application settings."""
         data = await request.json()
         settings = cfg.update_settings(data)
         return {"success": True, "settings": settings}
 
     @app.get("/api/proxy/detect")
     async def detect_local_proxy():
-        """自动检测本地代理端口"""
+        """Auto-detect local proxy port."""
         detected = await _detect_local_proxy()
         return {"detected": detected or ""}
 
     @app.get("/api/update/check")
     async def check_update(url: Optional[str] = None, current: Optional[str] = None, platform: Optional[str] = None):
-        """检查最新版本，不自动下载或安装。"""
+        """Check for the latest version without downloading or installing automatically."""
         settings = cfg.get_settings()
         update_url = url or settings.get("updateUrl") or cfg.DEFAULT_UPDATE_URL
         if not update_url:
             return JSONResponse(
                 status_code=400,
-                content={"success": False, "message": "请先配置 latest.json 更新地址"},
+                content={"success": False, "message": i18n.t("admin.configure_update_url_first")},
             )
         try:
             return await updater.check_update(
@@ -1503,7 +1477,7 @@ def create_admin_app() -> FastAPI:
 
     @app.post("/api/update/install")
     async def download_and_install_update(request: Request):
-        """下载最新安装包并启动安装器。"""
+        """Download the latest installer package and launch it."""
         data = await request.json() if request.headers.get("content-type") == "application/json" else {}
         settings = cfg.get_settings()
         update_url = data.get("url") or settings.get("updateUrl") or cfg.DEFAULT_UPDATE_URL
@@ -1518,19 +1492,19 @@ def create_admin_app() -> FastAPI:
                 return result
             installer_path = result.get("installerPath")
             if not installer_path:
-                raise updater.UpdateCheckError("下载安装包失败")
+                raise updater.UpdateCheckError(i18n.t("admin.download_installer_failed"))
             resolved_platform = result.get("platform") or platform
             quit_requested = _launch_update_installer(installer_path, resolved_platform)
             is_macos = resolved_platform.startswith("macos-")
             is_windows = resolved_platform.startswith("windows-")
             if quit_requested:
-                install_message = "更新包已下载，应用即将退出并启动安装器。"
+                install_message = i18n.t("admin.install_quit_starting")
             elif is_macos:
-                install_message = "更新包已下载并打开。请先退出当前应用，再按 macOS 提示完成安装。"
+                install_message = i18n.t("admin.install_macos_opened")
             elif is_windows:
-                install_message = "安装包已下载并启动。安装器会沿用旧安装目录，并在安装前关闭正在运行的 CC Desktop Switch。"
+                install_message = i18n.t("admin.install_windows_started")
             else:
-                install_message = "更新包已下载并打开。"
+                install_message = i18n.t("admin.install_opened")
             return {
                 **result,
                 "success": True,
@@ -1546,22 +1520,22 @@ def create_admin_app() -> FastAPI:
         except OSError as exc:
             return JSONResponse(
                 status_code=500,
-                content={"success": False, "message": f"启动安装器失败: {exc}"},
+                content={"success": False, "message": i18n.t("admin.install_launch_failed", error=exc)},
             )
 
     @app.get("/api/update/progress")
     async def get_update_progress():
-        """返回当前更新下载进度，供前端轮询。"""
+        """Return the current update download progress for frontend polling."""
         return updater.get_download_progress()
 
-    # ── 预设 API ──
+    # ── Presets API ──
     @app.get("/api/presets")
     async def get_presets():
-        """获取内置预设"""
+        """Get builtin provider presets."""
         return {"presets": cfg.get_presets()}
 
-    # ── 挂载前端静态文件 ──
-    # 必须放在 API 路由之后，否则 "/" 挂载会先匹配 /api/* 并返回静态 404。
+    # ── Mount Frontend Static Files ──
+    # Must be mounted after all /api/* routes so "/" does not shadow API endpoints.
     if FRONTEND_DIR.exists():
         frontend_static = StaticFiles(directory=str(FRONTEND_DIR), html=True)
         app.mount("/", frontend_static, name="frontend")
@@ -1569,7 +1543,7 @@ def create_admin_app() -> FastAPI:
     return app
 
 
-# ── 代理服务器管理 ──
+# ── Proxy Server Management ──
 _proxy_running = False
 _proxy_thread: Optional[threading.Thread] = None
 _proxy_server = None
@@ -1578,7 +1552,7 @@ _proxy_lock = threading.RLock()
 
 
 def _proxy_server_accepting(port: int) -> bool:
-    """确认当前记录的代理线程仍在监听端口。"""
+    """Confirm that the currently recorded proxy thread is still listening on the given port."""
     with _proxy_lock:
         thread = _proxy_thread
         server = _proxy_server
@@ -1598,7 +1572,7 @@ def _proxy_server_accepting(port: int) -> bool:
 
 
 def _wait_for_proxy_server_start(server, thread: threading.Thread, port: int, timeout: float = 2.0) -> bool:
-    """等待 uvicorn 完成监听，避免端口冲突时误报启动成功。"""
+    """Wait for uvicorn to finish binding so port conflicts are not misreported as started."""
     deadline = time.perf_counter() + timeout
     has_started_flag = hasattr(server, "started")
     while time.perf_counter() < deadline:
@@ -1619,7 +1593,7 @@ def _wait_for_proxy_server_start(server, thread: threading.Thread, port: int, ti
 
 
 def _start_proxy_server(port: int, restart: bool = False) -> bool:
-    """在新线程中启动代理服务器"""
+    """Start the proxy server in a background thread."""
     global _proxy_running, _proxy_thread, _proxy_server, _proxy_port
 
     requested_port = int(port)
@@ -1678,7 +1652,7 @@ def _start_proxy_server(port: int, restart: bool = False) -> bool:
 
 
 def _stop_proxy_server(wait: bool = True):
-    """停止代理服务器"""
+    """Stop the proxy server."""
     global _proxy_running, _proxy_thread, _proxy_server, _proxy_port
     with _proxy_lock:
         server = _proxy_server

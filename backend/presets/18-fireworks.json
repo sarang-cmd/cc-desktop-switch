@@ -1,0 +1,15 @@
+{
+  "id": "fireworks",
+  "name": "Fireworks AI",
+  "baseUrl": "https://api.fireworks.ai/inference/v1",
+  "baseUrlHint": "Fireworks AI fast inference OpenAI-compatible endpoint",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "accounts/fireworks/models/deepseek-v3",
+    "haiku": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    "opus": "accounts/fireworks/models/deepseek-r1",
+    "default": "accounts/fireworks/models/deepseek-v3"
+  },
+  "isBuiltin": true
+}

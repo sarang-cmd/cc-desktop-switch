@@ -1,0 +1,18 @@
+{
+  "id": "sarvam",
+  "name": "Sarvam AI",
+  "baseUrl": "https://api.sarvam.ai/v1",
+  "baseUrlHint": "Official Sarvam AI OpenAI-compatible endpoint (supports Bearer and api-subscription-key auth)",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "extraHeaders": {
+    "api-subscription-key": "{apiKey}"
+  },
+  "models": {
+    "sonnet": "sarvam-m",
+    "haiku": "sarvam-m",
+    "opus": "sarvam-m",
+    "default": "sarvam-m"
+  },
+  "isBuiltin": true
+}

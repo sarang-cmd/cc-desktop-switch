@@ -1,4 +1,4 @@
-"""配置管理 - JSON 配置文件读写"""
+"""Configuration management - JSON config file read and write."""
 
 import copy
 import json
@@ -8,6 +8,7 @@ import shutil
 from datetime import datetime
 from typing import Optional
 
+from backend import i18n
 from backend.model_alias import model_mappings_with_legacy_aliases, normalize_model_mappings
 from backend.preset_loader import load_builtin_presets
 
@@ -32,7 +33,7 @@ DEFAULT_CONFIG = {
     "providers": [],
     "settings": {
         "theme": "default",
-        "language": "zh",
+        "language": "en",
         "proxyPort": 18080,
         "adminPort": 18081,
         "autoStart": False,
@@ -46,18 +47,18 @@ DEFAULT_CONFIG = {
 
 
 def ensure_config_dir():
-    """确保配置目录存在"""
+    """Ensure the configuration directory exists."""
     os.makedirs(CONFIG_DIR, exist_ok=True)
 
 
 def ensure_backup_dir():
-    """确保配置备份目录存在"""
+    """Ensure the configuration backup directory exists."""
     ensure_config_dir()
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
 
 def load_config() -> dict:
-    """加载配置文件"""
+    """Load the configuration file from disk."""
     ensure_config_dir()
     if not os.path.exists(CONFIG_FILE):
         return _config_with_legacy_model_aliases(copy.deepcopy(DEFAULT_CONFIG))
@@ -70,10 +71,10 @@ def load_config() -> dict:
 
 
 def save_config(config: dict):
-    """保存配置文件"""
+    """Save the configuration file to disk atomically."""
     ensure_config_dir()
     normalized = normalize_config(config)
-    # 原子写入：先写临时文件，再重命名
+    # Atomic write: write to a temporary file first, then rename.
     tmp_file = CONFIG_FILE + ".tmp"
     with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(normalized, f, ensure_ascii=False, indent=2)
@@ -81,7 +82,7 @@ def save_config(config: dict):
 
 
 def _normalize_provider(provider: dict) -> dict:
-    """补齐 provider 必要字段，导入旧配置时保持兼容。"""
+    """Fill in required provider fields for backward compatibility with older configs."""
     normalized = dict(provider)
     provider_id = str(normalized.get("id") or "")
     safe_id = "".join(ch for ch in provider_id if ch.isalnum() or ch in {"-", "_"})[:64]
@@ -129,9 +130,9 @@ def _preset_with_legacy_model_aliases(preset: dict) -> dict:
 
 
 def normalize_config(config: dict) -> dict:
-    """把外部导入的配置整理成当前版本可读取的结构。"""
+    """Normalize an imported or raw config dictionary into the current schema."""
     if not isinstance(config, dict):
-        raise ValueError("配置文件必须是 JSON 对象")
+        raise ValueError(i18n.get_text("config.must_be_object", "en"))
 
     source = config.get("config") if isinstance(config.get("config"), dict) else config
     normalized = copy.deepcopy(DEFAULT_CONFIG)
@@ -146,7 +147,7 @@ def normalize_config(config: dict) -> dict:
 
     providers = source.get("providers", [])
     if not isinstance(providers, list):
-        raise ValueError("providers 必须是数组")
+        raise ValueError(i18n.get_text("config.providers_must_be_array", "en"))
     normalized_providers = []
     seen_ids = set()
     for provider in providers:
@@ -173,7 +174,7 @@ def normalize_config(config: dict) -> dict:
 
 
 def create_backup(reason: str = "manual") -> dict:
-    """备份当前配置文件，返回备份文件元数据。"""
+    """Back up the current config file and return backup metadata."""
     ensure_backup_dir()
     if not os.path.exists(CONFIG_FILE):
         save_config(load_config())
@@ -192,7 +193,7 @@ def create_backup(reason: str = "manual") -> dict:
 
 
 def list_backups() -> list:
-    """列出配置备份。"""
+    """List saved configuration backups."""
     ensure_backup_dir()
     backups = []
     for name in os.listdir(BACKUP_DIR):
@@ -211,7 +212,7 @@ def list_backups() -> list:
 
 
 def export_config() -> dict:
-    """导出完整配置。包含 API Key，仅供用户本机保存。"""
+    """Export the full configuration including API keys for local user backup."""
     return {
         "format": "cc-desktop-switch.config",
         "exportedAt": datetime.now().isoformat(timespec="seconds"),
@@ -220,7 +221,7 @@ def export_config() -> dict:
 
 
 def import_config(data: dict) -> dict:
-    """导入配置。导入前自动备份当前配置。"""
+    """Import configuration after automatically backing up the current config."""
     backup = create_backup("before-import")
     normalized = normalize_config(data)
     save_config(normalized)
@@ -228,10 +229,10 @@ def import_config(data: dict) -> dict:
 
 
 def get_or_create_gateway_api_key() -> str:
-    """获取本地 gateway 认证密钥，没有则生成一个。
+    """Get the local gateway auth key, generating one if it does not exist yet.
 
-    这个密钥写入 Claude Desktop 的 managed policy，用于满足 gateway 模式的
-    必填凭据要求。它不是上游提供商 API Key。
+    This key is written into Claude Desktop's managed policy to satisfy gateway mode's
+    required credential check. It is not the upstream provider API key.
     """
     config = load_config()
     key = config.get("gatewayApiKey")
@@ -243,18 +244,18 @@ def get_or_create_gateway_api_key() -> str:
 
 
 def get_gateway_api_key() -> Optional[str]:
-    """读取本地 gateway 认证密钥，不存在时不自动创建。"""
+    """Read the local gateway auth key without auto-creating it."""
     return load_config().get("gatewayApiKey")
 
 
 def get_providers() -> list:
-    """获取所有提供商列表"""
+    """Return all configured providers."""
     config = load_config()
     return config.get("providers", [])
 
 
 def get_provider(provider_id: str) -> Optional[dict]:
-    """按 ID 获取提供商"""
+    """Return a provider by ID."""
     for provider in get_providers():
         if provider.get("id") == provider_id:
             return provider
@@ -262,7 +263,7 @@ def get_provider(provider_id: str) -> Optional[dict]:
 
 
 def get_active_provider() -> Optional[dict]:
-    """获取当前激活的提供商"""
+    """Return the currently active provider."""
     config = load_config()
     active_id = config.get("activeProvider")
     if not active_id:
@@ -275,11 +276,11 @@ def get_active_provider() -> Optional[dict]:
 
 
 def add_provider(provider: dict) -> dict:
-    """添加提供商"""
+    """Add a new provider."""
     config = load_config()
     providers = config.get("providers", [])
 
-    # 生成唯一 ID
+    # Generate a unique ID
     import uuid
     provider = _normalize_provider(provider)
     existing_ids = {p.get("id") for p in providers}
@@ -292,7 +293,7 @@ def add_provider(provider: dict) -> dict:
     providers.append(provider)
     config["providers"] = providers
 
-    # 如果是第一个提供商，自动设为默认
+    # Automatically set as default if this is the first provider
     if len(providers) == 1:
         config["activeProvider"] = provider["id"]
 
@@ -301,7 +302,7 @@ def add_provider(provider: dict) -> dict:
 
 
 def update_provider(provider_id: str, data: dict) -> Optional[dict]:
-    """更新提供商"""
+    """Update an existing provider."""
     config = load_config()
     for i, p in enumerate(config.get("providers", [])):
         if p["id"] == provider_id:
@@ -310,11 +311,11 @@ def update_provider(provider_id: str, data: dict) -> Optional[dict]:
             updated["id"] = provider_id
             updated["isBuiltin"] = p.get("isBuiltin", False)
 
-            # 编辑表单中 API Key 留空表示“不修改”，避免误清空已保存密钥。
+            # Leaving API Key blank in the edit form means "keep existing key".
             if not data.get("apiKey"):
                 updated["apiKey"] = p.get("apiKey", "")
 
-            # preset 的额外认证头也要保留，例如 DeepSeek 的 x-api-key。
+            # Preserve preset extra auth headers such as DeepSeek's x-api-key.
             if "extraHeaders" not in data or data.get("extraHeaders") in (None, {}):
                 updated["extraHeaders"] = p.get("extraHeaders", {})
 
@@ -325,8 +326,7 @@ def update_provider(provider_id: str, data: dict) -> Optional[dict]:
                 updated["requestOptions"] = p.get("requestOptions", {})
 
             if "models" in data and isinstance(data["models"], dict):
-                # load_config() 给 models 注入的旧别名只用于兼容读取；merge 前先
-                # 归一化剥掉它们，否则显式清空的槽位会被旧别名回落重新填上。
+                # Strip legacy compatibility aliases before merging so explicitly cleared slots stay cleared.
                 merged_models = normalize_model_mappings(p.get("models", {}))
                 merged_models.update(data["models"])
                 updated["models"] = normalize_model_mappings(merged_models)
@@ -338,7 +338,7 @@ def update_provider(provider_id: str, data: dict) -> Optional[dict]:
 
 
 def delete_provider(provider_id: str) -> bool:
-    """删除提供商"""
+    """Delete a provider by ID."""
     config = load_config()
     original_len = len(config.get("providers", []))
     config["providers"] = [p for p in config.get("providers", []) if p["id"] != provider_id]
@@ -346,7 +346,7 @@ def delete_provider(provider_id: str) -> bool:
     if len(config["providers"]) == original_len:
         return False
 
-    # 如果删除的是当前激活的，切换到第一个可用的
+    # If the active provider was deleted, fall back to the first remaining provider.
     if config.get("activeProvider") == provider_id:
         config["activeProvider"] = config["providers"][0]["id"] if config["providers"] else None
 
@@ -358,7 +358,7 @@ def delete_provider(provider_id: str) -> bool:
 
 
 def set_active_provider(provider_id: str) -> bool:
-    """设置默认提供商"""
+    """Set the default active provider."""
     config = load_config()
     for p in config.get("providers", []):
         if p["id"] == provider_id:
@@ -369,7 +369,7 @@ def set_active_provider(provider_id: str) -> bool:
 
 
 def update_models(provider_id: str, models: dict) -> bool:
-    """更新模型映射"""
+    """Update model mappings for a provider."""
     config = load_config()
     for p in config.get("providers", []):
         if p["id"] == provider_id:
@@ -380,7 +380,7 @@ def update_models(provider_id: str, models: dict) -> bool:
 
 
 def reorder_providers(provider_ids: list[str]) -> bool:
-    """按照前端拖动后的 ID 顺序保存 providers。"""
+    """Save providers in the order specified by the frontend drag-and-drop list."""
     config = load_config()
     providers = config.get("providers", [])
     by_id = {provider.get("id"): provider for provider in providers}
@@ -402,11 +402,11 @@ def reorder_providers(provider_ids: list[str]) -> bool:
 
 
 def get_settings() -> dict:
-    """获取设置"""
+    """Return current application settings."""
     config = load_config()
     settings = dict(DEFAULT_CONFIG["settings"])
     settings.update(config.get("settings", {}))
-    # 统一模型菜单暂不开放，避免不同厂商能力混在一起导致 1M / 思维深度失效。
+    # Unified model menu remains disabled to prevent cross-provider capability conflicts.
     settings["exposeAllProviderModels"] = False
     if not settings.get("updateUrl"):
         settings["updateUrl"] = DEFAULT_UPDATE_URL
@@ -414,7 +414,7 @@ def get_settings() -> dict:
 
 
 def update_settings(settings: dict) -> dict:
-    """更新设置"""
+    """Update application settings."""
     config = load_config()
     current = dict(DEFAULT_CONFIG["settings"])
     current.update(config.get("settings", {}))
@@ -428,5 +428,5 @@ def update_settings(settings: dict) -> dict:
 
 
 def get_presets() -> list:
-    """获取内置预设列表"""
+    """Return the list of builtin provider presets."""
     return [_preset_with_legacy_model_aliases(preset) for preset in load_builtin_presets()]

@@ -1,0 +1,15 @@
+{
+  "id": "openai",
+  "name": "OpenAI",
+  "baseUrl": "https://api.openai.com/v1",
+  "baseUrlHint": "Official OpenAI API endpoint (GPT-4.1 / o3 series)",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "gpt-4.1",
+    "haiku": "gpt-4.1-mini",
+    "opus": "o3",
+    "default": "gpt-4.1"
+  },
+  "isBuiltin": true
+}

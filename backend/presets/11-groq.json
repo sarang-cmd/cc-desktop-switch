@@ -1,0 +1,15 @@
+{
+  "id": "groq",
+  "name": "Groq",
+  "baseUrl": "https://api.groq.com/openai/v1",
+  "baseUrlHint": "Uses Groq's ultra-fast LPU OpenAI-compatible Chat Completions endpoint",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "llama-3.3-70b-versatile",
+    "haiku": "llama-3.1-8b-instant",
+    "opus": "deepseek-r1-distill-llama-70b",
+    "default": "llama-3.3-70b-versatile"
+  },
+  "isBuiltin": true
+}

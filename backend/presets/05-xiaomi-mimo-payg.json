@@ -12,8 +12,8 @@
   },
   "modelOptions": {
     "mimo_1m": {
-      "label": "启用 MiMo 1M 上下文",
-      "description": "用于 Claude Code/长上下文场景。勾选后把 Opus、Sonnet、Haiku 映射到 mimo-v2.5-pro 并标记为 1M；Default 只作为回退，不会作为菜单项。",
+      "label": "Enable MiMo 1M Context",
+      "description": "For Claude Code and long-context tasks. Maps Opus, Sonnet, and Haiku to mimo-v2.5-pro and marks them as 1M-capable; Default is used only as a fallback and hidden from the menu.",
       "models": {
         "sonnet": "mimo-v2.5-pro",
         "haiku": "mimo-v2.5-pro",

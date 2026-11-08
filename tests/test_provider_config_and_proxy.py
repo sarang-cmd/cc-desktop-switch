@@ -279,7 +279,7 @@ class ProviderConfigTests(unittest.TestCase):
         self.assertNotIn("siliconflow", presets)
         self.assertEqual(presets["bailian"]["modelCapabilities"], {})
         qwen_1m = presets["bailian"]["modelOptions"]["qwen_1m"]
-        self.assertIn("开启千问 1M 上下文", qwen_1m["label"])
+        self.assertIn("Qwen 1M Context", qwen_1m["label"])
         self.assertTrue(qwen_1m["modelCapabilities"]["qwen3.6-plus"]["supports1m"])
         self.assertTrue(qwen_1m["modelCapabilities"]["qwen3.6-flash"]["supports1m"])
 
@@ -309,8 +309,8 @@ class ProviderConfigTests(unittest.TestCase):
         deepseek_max = presets["deepseek"]["requestOptionPresets"]["deepseek_max_effort"]
         self.assertEqual(deepseek_max["requestOptions"]["anthropic"]["output_config"]["effort"], "max")
         self.assertEqual(deepseek_max["requestOptions"]["anthropic"]["thinking"]["type"], "enabled")
-        self.assertIn("Low：更快更省", deepseek_max["description"])
-        self.assertIn("未勾选则使用 Claude 当前默认配置", deepseek_max["description"])
+        self.assertIn("Low: Faster and more economical", deepseek_max["description"])
+        self.assertIn("uses Claude Desktop default settings", deepseek_max["description"])
 
     def test_builtin_preset_loader_skips_invalid_schema_entries(self):
         schema = {
@@ -1100,7 +1100,7 @@ class ProviderConfigTests(unittest.TestCase):
         self.assertEqual(cleared["requestOptions"], {})
 
     def test_all_builtin_presets_expose_only_explicit_provider_models(self):
-        """内置预设只把显式映射的 Claude route 暴露给 Claude Desktop。"""
+        """Builtin presets expose only explicitly mapped Claude routes to Claude Desktop."""
         for preset in cfg.get_presets():
             with self.subTest(provider=preset["id"]):
                 if preset["id"] == "third-party":
@@ -1600,7 +1600,8 @@ class CcSwitchImportTests(unittest.TestCase):
         self.assertFalse(providers["openai"]["supported"])
         self.assertIn("OpenAI Chat", providers["openai"]["reason"])
         self.assertFalse(providers["local"]["supported"])
-        self.assertIn("本机代理地址", providers["local"]["reason"])
+        self.assertEqual(providers["local"]["reasonCode"], "local_proxy_url")
+        self.assertIn("local CC-Switch proxy address", providers["local"]["reason"])
 
     def test_import_adds_supported_only_and_creates_backup(self):
         self._insert_ccswitch_provider(
@@ -1661,18 +1662,21 @@ class CcSwitchImportTests(unittest.TestCase):
         providers = cfg.get_providers()
         names = [provider["name"] for provider in providers]
 
-        self.assertEqual(first["imported"][0]["name"], "DeepSeek CC Switch 导入")
+        self.assertEqual(first["imported"][0]["name"], "DeepSeek CC Switch Import")
         self.assertEqual(second["imported"], [])
-        self.assertEqual(second["skipped"][0]["reason"], "已导入过这个 CC-Switch 配置")
+        self.assertEqual(
+            second["skipped"][0]["reason"],
+            "This CC-Switch configuration has already been imported",
+        )
         self.assertEqual(len(providers), 2)
         self.assertIn("DeepSeek", names)
-        self.assertIn("DeepSeek CC Switch 导入", names)
+        self.assertIn("DeepSeek CC Switch Import", names)
         self.assertEqual(cfg.get_provider("manual-deepseek")["apiKey"], "manual-secret")
 
     def test_admin_routes_preview_masks_secret_and_import_requires_local_header(self):
         self._insert_ccswitch_provider(
             "zhipu",
-            "智谱 GLM",
+            "Zhipu GLM",
             {
                 "ANTHROPIC_BASE_URL": "https://open.bigmodel.cn/api/anthropic",
                 "ANTHROPIC_AUTH_TOKEN": "sk-zhipu-secret",
@@ -1701,7 +1705,7 @@ class CcSwitchImportTests(unittest.TestCase):
         self.assertEqual(preview["apiKeyPreview"], "sk-z...cret")
         self.assertEqual(blocked_import.status_code, 403)
         self.assertEqual(import_response.status_code, 200)
-        self.assertEqual(import_response.json()["imported"][0]["name"], "智谱 GLM")
+        self.assertEqual(import_response.json()["imported"][0]["name"], "Zhipu GLM")
 
 
 class ProviderToolsTests(unittest.TestCase):
@@ -1960,7 +1964,7 @@ class AdminApiTests(unittest.TestCase):
                 "Authorization: Bearer sk-log-secret123456 "
                 "url=https://example.test?token=query-secret-token&"
                 "access_token=log-access-secret&refresh_token=log-refresh-secret&client_secret=log-client-secret "
-                "中文诊断提示：本机 helper 仅作为提示信息"
+                "Grüße: local helper output is informational only"
             ),
         )
 
@@ -1989,8 +1993,8 @@ class AdminApiTests(unittest.TestCase):
         self.assertNotIn("log-refresh-secret", serialized)
         self.assertNotIn("log-client-secret", serialized)
         self.assertIn("******", serialized)
-        self.assertIn("中文诊断提示", serialized)
-        self.assertNotIn("ä¸­æ", serialized)
+        self.assertIn("Grüße", serialized)
+        self.assertNotIn("GrÃ¼", serialized)
         self.assertEqual(check.status_code, 200)
         self.assertIn("checks", check.json())
         self.assertFalse(check.json()["ok"])
@@ -1999,7 +2003,7 @@ class AdminApiTests(unittest.TestCase):
 
     def test_diagnostics_export_redacts_socks_proxy_credentials(self):
         log_buffer.clear()
-        log_buffer.add("INFO", "使用上游代理: socks5://proxy-user:proxy-pass@127.0.0.1:1080")
+        log_buffer.add("INFO", "Using upstream proxy: socks5://proxy-user:proxy-pass@127.0.0.1:1080")
         cfg.update_settings({
             "upstreamProxyEnabled": True,
             "upstreamProxy": "socks5://proxy-user:proxy-pass@127.0.0.1:1080",
@@ -2031,7 +2035,7 @@ class AdminApiTests(unittest.TestCase):
         log_buffer.clear()
         log_buffer.add(
             "ERROR",
-            "上游返回非 JSON：HTTP 200, content-type=text/html; charset=utf-8, preview=<html><script>var arg1='abc'",
+            "Upstream returned non-JSON: HTTP 200, content-type=text/html; charset=utf-8, preview=<html><script>var arg1='abc'",
         )
 
         check = self.client.post("/api/diagnostics/check", headers=admin_headers())
@@ -2199,7 +2203,7 @@ class AdminApiTests(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertFalse(result["ok"])
         self.assertEqual(result["statusCode"], 401)
-        self.assertIn("Kimi 认证失败", result["message"])
+        self.assertIn("Kimi authentication failed", result["message"])
         self.assertIn("https://api.moonshot.cn/anthropic", result["message"])
         self.assertIn("https://api.kimi.com/coding", result["message"])
 
@@ -2246,7 +2250,7 @@ class AdminApiTests(unittest.TestCase):
         self.assertEqual(calls[-1][2]["json"]["model"], "kimi-k2.6")
         self.assertFalse(result["ok"])
         self.assertEqual(result["statusCode"], 401)
-        self.assertIn("Kimi 认证失败", result["message"])
+        self.assertIn("Kimi authentication failed", result["message"])
 
     def test_usage_route_returns_normalized_provider_tools_result(self):
         provider = cfg.add_provider({
@@ -2459,7 +2463,7 @@ class AdminApiTests(unittest.TestCase):
         self.assertTrue(data["requiresProxy"])
         self.assertFalse(data["proxyStarted"])
         self.assertEqual(data["mode"], "local_proxy")
-        self.assertIn("本机转发服务启动失败", data["message"])
+        self.assertIn("local forwarding service failed to start", data["message"])
         self.assertEqual(apply_config.call_args.args[0], "http://127.0.0.1:18080")
         start_proxy.assert_called_once_with(18080, restart=True)
 
@@ -2502,7 +2506,7 @@ class AdminApiTests(unittest.TestCase):
         self.assertFalse(data["configSuccess"])
         self.assertTrue(data["requiresProxy"])
         self.assertEqual(data["mode"], "local_proxy")
-        self.assertIn("至少映射一个 Claude 模型槽位", data["message"])
+        self.assertIn("map at least one Claude model slot", data["message"])
         apply_config.assert_not_called()
 
     def test_provider_compatibility_report_marks_openai_as_experimental(self):
@@ -2537,7 +2541,7 @@ class AdminApiTests(unittest.TestCase):
                 "platform": platform,
                 "assets": [],
                 "downloaded": False,
-                "message": "当前已是最新版本",
+                "message": "You are already on the latest version.",
             }
 
         with patch("backend.main.updater.current_platform", return_value="windows-x64"):
@@ -2678,7 +2682,7 @@ class AdminApiTests(unittest.TestCase):
         self.assertTrue(response.json()["installerStarted"])
         self.assertTrue(response.json()["quitRequested"])
         self.assertEqual(response.json()["platform"], "windows-x64")
-        self.assertIn("即将退出并启动安装器", response.json()["message"])
+        self.assertIn("quit and launch the installer", response.json()["message"])
         popen.assert_called_once_with(
             updater.install_after_quit_command(
                 r"C:\Temp\CC-Desktop-Switch-v1.0.11-Windows-Setup.exe",
@@ -2949,8 +2953,8 @@ class SingleInstanceStartupTests(unittest.TestCase):
                                     app_main.main()
 
         printed = "\n".join(messages)
-        self.assertIn("已经在运行，正在尝试唤起现有窗口", printed)
-        self.assertIn("已唤起现有实例", printed)
+        self.assertIn("is already running. Attempting to bring the existing window", printed)
+        self.assertIn("Activated existing instance", printed)
         message_box.assert_not_called()
 
 
@@ -3485,7 +3489,7 @@ class ProxyConversionTests(unittest.TestCase):
                 result = asyncio.run(forward_request(body, provider, "req-connect-proxy"))
 
         self.assertEqual(result["error"]["type"], "connection_error")
-        self.assertIn("通过上游代理", result["error"]["message"])
+        self.assertIn("via upstream proxy", result["error"]["message"])
         self.assertIn("127.0.0.1:1080", result["error"]["message"])
         self.assertNotIn("proxy-pass", result["error"]["message"])
 
@@ -4045,7 +4049,7 @@ class ProxyAppTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"]["type"], "invalid_request_error")
-        self.assertIn("未在 CC Desktop Switch 中映射", response.json()["error"]["message"])
+        self.assertIn("is not mapped in CC Desktop Switch", response.json()["error"]["message"])
 
     def test_messages_endpoint_accepts_internal_dated_haiku_route_when_slot_is_mapped(self):
         cfg.add_provider({
@@ -4350,7 +4354,7 @@ class DesktopTrayControllerTests(unittest.TestCase):
         self.assertEqual(observed["base_url"], "http://127.0.0.1:18080")
         self.assertIsNone(observed["providers"])
         self.assertFalse(observed["expose_all"])
-        self.assertIn("桌面版配置已同步", tray.icon.notifications[0][1])
+        self.assertIn("desktop configuration synced", tray.icon.notifications[0][1])
         start_proxy.assert_called_once_with(18080, restart=True)
         restart_dialog.assert_not_called()
 
@@ -4379,9 +4383,9 @@ class DesktopTrayControllerTests(unittest.TestCase):
             tray.show_desktop_restart_dialog({"name": "Kimi"}, desktop_synced=True)
 
         message_box.assert_called_once()
-        self.assertEqual(message_box.call_args.args[0], "需要重启 Claude 桌面版")
+        self.assertEqual(message_box.call_args.args[0], "Restart Claude Desktop Required")
         self.assertIn("Kimi", message_box.call_args.args[1])
-        self.assertIn("重新打开 Claude 桌面版", message_box.call_args.args[1])
+        self.assertIn("quit and reopen Claude Desktop", message_box.call_args.args[1])
 
     def test_installer_reuses_previous_install_dir_and_closes_running_app(self):
         installer = Path(__file__).resolve().parents[1] / "installer.nsi"
@@ -4426,9 +4430,12 @@ class StaticFrontendTests(unittest.TestCase):
         html = (self.root / "frontend" / "index.html").read_text(encoding="utf-8")
         i18n = (self.root / "frontend" / "js" / "i18n.js").read_text(encoding="utf-8")
 
-        self.assertIn("Claude 桌面版", html)
-        self.assertIn("原理很简单", i18n)
-        self.assertNotIn("Claude Desktop 3P 模式", html)
+        self.assertIn("Claude Desktop", html)
+        self.assertIn('<span data-i18n="desktop.apply">Apply to Claude Desktop</span>', html)
+        self.assertIn("desktop.explainText", html)
+        self.assertIn("desktop.step1Title", html)
+        self.assertNotIn("3P mode", html + i18n)
+        self.assertNotIn("3P Mode", html + i18n)
 
     def test_provider_add_presets_and_guide_copy_are_user_facing(self):
         html = (self.root / "frontend" / "index.html").read_text(encoding="utf-8")
@@ -4436,13 +4443,14 @@ class StaticFrontendTests(unittest.TestCase):
         i18n = (self.root / "frontend" / "js" / "i18n.js").read_text(encoding="utf-8")
 
         self.assertIn("provider-add-layout", html)
-        self.assertIn("一键应用到 Claude 桌面版", html)
+        self.assertIn('data-i18n="providersAdd.applyToDesktop"', html)
+        self.assertIn(">Apply to Claude Desktop</span>", html)
         self.assertIn("providersAdd.presetsHint", html)
         self.assertNotIn(".preset-panel {\n  display: none;", css)
         self.assertEqual(html.count('class="timeline-card"'), 3)
-        self.assertNotIn("本地代理", html + i18n)
-        self.assertNotIn("本机代理", (html + i18n).replace("CC-Switch 本机代理地址", ""))
-        self.assertNotIn("确认本地端口可用", html + i18n)
+        self.assertIn('data-i18n="guide.step1Text"', html)
+        self.assertIn('data-i18n="guide.step3Text"', html)
+        self.assertNotIn("proxy console", (html + i18n).lower())
 
     def test_dashboard_presets_selection_update_and_desktop_health_ui_exist(self):
         html = (self.root / "frontend" / "index.html").read_text(encoding="utf-8")
@@ -4512,7 +4520,8 @@ class StaticFrontendTests(unittest.TestCase):
         self.assertIn("settings.installingUpdate", app_js + i18n)
         self.assertIn("toast.updateDownloading", app_js + i18n)
         self.assertIn(".update-badge:disabled", css)
-        self.assertIn("不会删除本工具里保存的提供商和 API Key", i18n)
+        self.assertIn("confirm.desktopClear", i18n)
+        self.assertIn("will not delete providers or API keys", i18n)
         self.assertIn('class="panel model-menu-mode-panel" hidden aria-hidden="true"', html)
         self.assertIn('class="settings-row" hidden aria-hidden="true"', html)
         self.assertIn('data-action="toggle-model-menu-mode"', html)
@@ -4576,21 +4585,19 @@ class StaticFrontendTests(unittest.TestCase):
 
     def test_current_guides_do_not_use_old_desktop_gateway_wording(self):
         forbidden = [
-            "默认直连",
-            "关闭本工具也能继续使用",
-            "实验转发模式",
-            "Claude 桌面版 -> 你的 API 提供商",
+            "direct connection by default",
+            "still works after closing this tool",
+            "experimental forwarding mode",
+            "claude desktop -> your api provider",
         ]
         guide_paths = [
             self.root / "README.md",
-            self.root / "README.zh-CN.md",
-            self.root / "README.ja.md",
             self.root / "docs" / "QUICK_START.md",
             self.root / "docs" / "USAGE.md",
         ]
 
         for path in guide_paths:
-            text = path.read_text(encoding="utf-8")
+            text = path.read_text(encoding="utf-8").lower()
             for phrase in forbidden:
                 self.assertNotIn(phrase, text, str(path))
 
@@ -4612,7 +4619,7 @@ class StaticFrontendTests(unittest.TestCase):
         self.assertIn("compatibility-item.experimental", css)
         self.assertIn("getProviderCompatibility", api_js)
         self.assertIn("renderProviderCompatibilityList", app_js)
-        self.assertIn("OpenAI Chat 属于实验适配", html + i18n)
+        self.assertIn("OpenAI Chat is experimental", html + i18n)
         self.assertIn("toast.openaiFormatExperimental", app_js + i18n)
 
     def test_ccswitch_import_ui_is_isolated_and_marks_openai_as_skipped(self):
@@ -4632,13 +4639,12 @@ class StaticFrontendTests(unittest.TestCase):
         self.assertIn("getCcSwitchProviders", api_js)
         self.assertIn("importCcSwitchProviders", app_js + api_js)
         self.assertIn("refreshCcSwitchImportStatus", app_js)
-        self.assertIn("只导入 Anthropic 兼容配置", html + i18n)
-        self.assertIn("OpenAI 格式会显示为暂不导入", html + i18n)
+        self.assertIn("Only Anthropic-compatible configs are imported", html + i18n)
+        self.assertIn("OpenAI formats are shown but skipped", html + i18n)
         self.assertIn("confirm.ccswitchImport", app_js + i18n)
-        self.assertIn("不会覆盖现有提供商", i18n)
-        self.assertIn("不会修改 CC-Switch", i18n)
-        self.assertIn("转发状态", html + i18n)
-        self.assertNotIn("代理控制台", html + i18n)
+        self.assertIn("without changing CC-Switch or overwriting existing providers", i18n)
+        self.assertIn("Forwarding Status", html + i18n)
+        self.assertNotIn("Proxy Console", html + i18n)
 
 
 if __name__ == "__main__":

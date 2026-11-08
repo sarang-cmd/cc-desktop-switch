@@ -1,13 +1,13 @@
-"""CC-Switch 配置导入适配。
+"""CC-Switch configuration import adapter.
 
-只读取 CC-Switch 本地配置，不写入它的数据库。第一版只导入 Anthropic
-兼容供应商；OpenAI Chat / Responses 先展示为不支持，避免转换边界影响主流程。
+Reads local CC-Switch configurations in read-only mode without modifying its database.
+Only Anthropic-compatible providers are imported; OpenAI Chat / Responses entries are
+shown as unsupported to avoid conversion boundary issues in the primary workflow.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import secrets
 import sqlite3
 from pathlib import Path
@@ -15,6 +15,7 @@ from typing import Any, Iterable
 from urllib.parse import urlparse
 
 from backend import config as cfg
+from backend import i18n
 
 
 CCSWITCH_DIR = Path.home() / ".cc-switch"
@@ -22,9 +23,9 @@ CCSWITCH_DB = CCSWITCH_DIR / "cc-switch.db"
 CCSWITCH_LEGACY_CONFIG = CCSWITCH_DIR / "config.json"
 
 SUPPORTED_API_FORMATS = {"anthropic", ""}
-UNSUPPORTED_FORMAT_MESSAGES = {
-    "openai_chat": "OpenAI Chat 格式本轮不自动导入，避免转换兼容风险。",
-    "openai_responses": "OpenAI Responses 格式暂未适配，暂不自动导入。",
+UNSUPPORTED_FORMAT_KEYS = {
+    "openai_chat": "ccswitch.unsupported_openai_chat",
+    "openai_responses": "ccswitch.unsupported_openai_responses",
 }
 
 
@@ -112,17 +113,27 @@ def _candidate_from_row(row: dict, include_secret: bool = False) -> dict:
 
     supported = api_format in SUPPORTED_API_FORMATS
     reason = ""
+    reason_code = ""
     if api_format not in SUPPORTED_API_FORMATS:
-        reason = UNSUPPORTED_FORMAT_MESSAGES.get(api_format, f"{api_format} 格式暂不支持自动导入。")
+        reason_key = UNSUPPORTED_FORMAT_KEYS.get(api_format)
+        if reason_key:
+            reason_code = api_format
+            reason = i18n.t(reason_key)
+        else:
+            reason_code = "unsupported_format"
+            reason = i18n.t("ccswitch.unsupported_format", format=api_format)
     elif not base_url:
         supported = False
-        reason = "没有发现 API 地址，可能是官方登录或空配置。"
+        reason_code = "missing_base_url"
+        reason = i18n.t("ccswitch.missing_base_url")
     elif _is_local_proxy_url(base_url):
         supported = False
-        reason = "这是 CC-Switch 本机代理地址，不能作为上游 API 导入。"
+        reason_code = "local_proxy_url"
+        reason = i18n.t("ccswitch.local_proxy_url")
     elif not api_key:
         supported = False
-        reason = "没有发现 API Key。"
+        reason_code = "missing_api_key"
+        reason = i18n.t("ccswitch.missing_api_key")
 
     defaults = _builtin_defaults(name, base_url)
     provider = {
@@ -138,6 +149,7 @@ def _candidate_from_row(row: dict, include_secret: bool = False) -> dict:
         "extraHeaders": defaults["extraHeaders"],
         "supported": supported,
         "reason": reason,
+        "reasonCode": reason_code,
     }
     if include_secret:
         provider["apiKey"] = api_key
@@ -188,7 +200,7 @@ def status(root: Path | None = None) -> dict:
 
 
 class CcSwitchImportError(ValueError):
-    """CC-Switch 导入错误。"""
+    """CC-Switch import error."""
 
 
 def _read_sqlite_rows(db_path: Path) -> list[dict]:
@@ -207,7 +219,7 @@ def _read_sqlite_rows(db_path: Path) -> list[dict]:
         ).fetchall()
         return [dict(row) for row in rows]
     except sqlite3.Error as exc:
-        raise CcSwitchImportError(f"读取 CC-Switch 数据库失败: {exc}") from exc
+        raise CcSwitchImportError(i18n.t("ccswitch.db_read_failed", error=exc)) from exc
     finally:
         conn.close()
 
@@ -218,7 +230,7 @@ def _read_legacy_rows(config_path: Path) -> list[dict]:
     try:
         data = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise CcSwitchImportError(f"读取 CC-Switch 旧配置失败: {exc}") from exc
+        raise CcSwitchImportError(i18n.t("ccswitch.legacy_read_failed", error=exc)) from exc
 
     providers = data.get("providers", {})
     if not isinstance(providers, dict):
@@ -268,7 +280,7 @@ def _existing_keys(providers: Iterable[dict]) -> dict[str, set]:
 
 
 def _dedupe_import_name(name: str, existing_names: set[str]) -> str:
-    base = f"{name} CC Switch 导入"
+    base = i18n.t("ccswitch.imported_suffix", name=name)
     candidate = base
     index = 2
     while candidate.lower() in existing_names:
@@ -310,11 +322,21 @@ def import_providers(ids: list[str] | None = None, set_default: bool = False, ro
         if candidate["id"] not in selected_ids:
             continue
         if not candidate["supported"]:
-            unsupported.append({"id": candidate["id"], "name": candidate["name"], "reason": candidate["reason"]})
+            unsupported.append({
+                "id": candidate["id"],
+                "name": candidate["name"],
+                "reason": candidate["reason"],
+                "reasonCode": candidate.get("reasonCode", ""),
+            })
             continue
         source_key = str(candidate["id"])
         if source_key in existing["source"]:
-            skipped.append({"id": candidate["id"], "name": candidate["name"], "reason": "已导入过这个 CC-Switch 配置"})
+            skipped.append({
+                "id": candidate["id"],
+                "name": candidate["name"],
+                "reason": i18n.t("ccswitch.already_imported"),
+                "reasonCode": "already_imported",
+            })
             continue
         key = (candidate["name"].strip().lower(), _normalize_base_url(candidate["baseUrl"]).lower())
         if key in existing["provider"]:

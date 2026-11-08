@@ -1,4 +1,4 @@
-"""第三方 API 格式适配层。"""
+"""Third-party API format adapter layer."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 
 
 def normalize_api_format(value: str) -> str:
-    """统一历史 apiFormat 值，保留 anthropic 主线。"""
+    """Normalize legacy apiFormat values while keeping anthropic as the primary format."""
     normalized = str(value or "anthropic").strip().lower().replace("-", "_")
     if normalized in {"openai", "openai_chat", "chat_completions"}:
         return "openai_chat"
@@ -18,7 +18,7 @@ def normalize_api_format(value: str) -> str:
 
 
 def content_to_text(content: Any) -> str:
-    """把常见内容块转换为 OpenAI Chat 可接受的文本。"""
+    """Convert common content blocks into plain text accepted by OpenAI Chat."""
     if content is None:
         return ""
     if isinstance(content, str):
@@ -146,7 +146,7 @@ def _anthropic_message_to_openai(message: dict) -> list[dict]:
 
 
 def anthropic_to_openai_chat_body(body: dict, stream: bool) -> dict:
-    """将 Claude Desktop 的 Anthropic Messages 请求转换为 OpenAI Chat。"""
+    """Convert Claude Desktop Anthropic Messages requests into OpenAI Chat requests."""
     messages = [dict(message) for message in body.get("messages", [])]
     system_msg = body.get("system")
     if not system_msg and messages and messages[0].get("role") == "system":
@@ -222,7 +222,7 @@ def _openai_finish_reason_to_anthropic(reason: Any, has_tool_calls: bool) -> str
 
 
 def openai_chat_to_anthropic(openai_resp: dict, model: str) -> dict:
-    """将 OpenAI Chat 响应转换为 Anthropic message。"""
+    """Convert an OpenAI Chat response into an Anthropic message response."""
     choice = (openai_resp.get("choices") or [{}])[0]
     message = choice.get("message") or {}
     content_blocks = []
@@ -247,7 +247,7 @@ def openai_chat_to_anthropic(openai_resp: dict, model: str) -> dict:
 
 
 def openai_chat_chunk_to_anthropic(chunk: dict, model: str) -> dict:
-    """将 OpenAI Chat 流式文本块转换为 Anthropic SSE 事件。"""
+    """Convert an OpenAI Chat streaming chunk into an Anthropic SSE event."""
     choices = chunk.get("choices", [])
     if not choices:
         return {"type": "message_stop"}

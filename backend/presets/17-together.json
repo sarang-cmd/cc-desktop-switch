@@ -1,0 +1,15 @@
+{
+  "id": "together",
+  "name": "Together AI",
+  "baseUrl": "https://api.together.xyz/v1",
+  "baseUrlHint": "Together AI OpenAI-compatible inference cloud for open-weights models",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "Qwen/Qwen3-235B-A22B-fp8-tput",
+    "haiku": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    "opus": "deepseek-ai/DeepSeek-R1",
+    "default": "Qwen/Qwen3-235B-A22B-fp8-tput"
+  },
+  "isBuiltin": true
+}

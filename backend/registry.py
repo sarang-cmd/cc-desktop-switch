@@ -1,4 +1,4 @@
-"""Windows / macOS 注册表 / plist 操作 - 配置 Claude Desktop 3P 模式"""
+"""Windows registry / macOS plist operations for configuring Claude Desktop 3P mode."""
 
 import base64
 import json
@@ -9,13 +9,14 @@ import tempfile
 import uuid
 from typing import Optional
 
+from backend import i18n
 from backend.model_alias import all_provider_model_entries, desktop_model_entries
 
 REGISTRY_PATH = r"SOFTWARE\Policies\Claude"
 CCDS_MARKER = "ccds_managed"
 COWORK_EGRESS_ALLOWED_HOSTS = '["*"]'
 
-# 预期的配置项（名称 → 默认值, 值类型）
+# Expected configuration items (name -> (default_value, value_type))
 DESKTOP_CONFIG = {
     "inferenceProvider": ("gateway", str),
     "inferenceGatewayApiKey": ("", str),
@@ -27,16 +28,16 @@ DESKTOP_CONFIG = {
     "coworkEgressAllowedHosts": (COWORK_EGRESS_ALLOWED_HOSTS, str),
 }
 
-# ── 辅助函数 ──
+# ── Helper Functions ──
 
 def _managed_policy_names(names: list[str]) -> list[str]:
-    """返回本工具写入、清除时也应删除的 Claude policy 项。"""
+    """Return the Claude policy keys managed by this tool that should be deleted when clearing."""
     managed = set(DESKTOP_CONFIG.keys()) | {CCDS_MARKER}
     return [name for name in names if name in managed]
 
 
 def _desktop_model_items(items: list) -> list:
-    """只保留 Claude Desktop policy 支持的模型字段。"""
+    """Keep only model fields supported by the Claude Desktop policy."""
     cleaned = []
     for item in items:
         if not isinstance(item, dict):
@@ -51,8 +52,9 @@ def _desktop_model_items(items: list) -> list:
         cleaned.append({k: v for k, v in allowed.items() if v is not None})
     return cleaned
 
+
 def _safe_config_value(name: str, value) -> str:
-    """返回可展示的配置值，避免把密钥暴露给前端。"""
+    """Return a display-safe configuration value without exposing secrets to the frontend."""
     lowered = name.lower()
     if "headers" in lowered and value in (None, "", "[]", []):
         return ""
@@ -62,7 +64,7 @@ def _safe_config_value(name: str, value) -> str:
 
 
 def serialize_gateway_headers(extra_headers: Optional[dict], api_key: str = "") -> str:
-    """把 provider extraHeaders 转为 Claude 3P policy 的额外请求头。"""
+    """Convert provider extraHeaders into extra request headers for the Claude 3P policy."""
     if not isinstance(extra_headers, dict) or not extra_headers:
         return ""
     headers = []
@@ -76,8 +78,9 @@ def serialize_gateway_headers(extra_headers: Optional[dict], api_key: str = "") 
         headers.append(f"{header_name}: {header_value}")
     return json.dumps(headers, ensure_ascii=False, separators=(",", ":")) if headers else ""
 
+
 def _os_name() -> str:
-    """返回 'win', 'mac', 'linux'"""
+    """Return 'win', 'mac', or 'linux'."""
     if sys.platform == "win32":
         return "win"
     if sys.platform == "darwin":
@@ -86,15 +89,19 @@ def _os_name() -> str:
 
 
 def _not_supported() -> dict:
-    """非 Windows 且非 macOS 时的提示"""
-    return {"success": False, "message": "Claude Desktop 没有 Linux GUI 版本，无需配置"}
+    """Return a status message when running on neither Windows nor macOS."""
+    return {
+        "success": False,
+        "code": "linux_unsupported",
+        "message": i18n.t("registry.linux_unsupported"),
+    }
 
 
 def provider_inference_models(provider: Optional[dict]) -> list:
-    """生成 Claude Desktop gateway 需要的模型列表。
+    """Generate the model list required by the Claude Desktop gateway policy.
 
-    Claude Desktop 只看到 Claude-safe route 名称；真实上游模型 ID 只保留
-    在代理内部映射里。1M 上下文仍需要在对应 route 上显式标注 supports1m。
+    Claude Desktop only sees Claude-safe route names; raw upstream model IDs stay
+    inside the local proxy mapping. 1M context still requires supports1m on the route.
     """
     if not provider:
         return []
@@ -103,7 +110,7 @@ def provider_inference_models(provider: Optional[dict]) -> list:
 
 
 def all_provider_inference_models(providers: list[dict]) -> list:
-    """生成所有 provider 的 Claude Desktop 模型列表。"""
+    """Generate the Claude Desktop model list across all providers."""
     result = _desktop_model_items(all_provider_model_entries(providers))
     return result
 
@@ -113,7 +120,7 @@ def serialize_inference_models(
     providers: Optional[list[dict]] = None,
     expose_all: bool = False,
 ) -> str:
-    """序列化 inferenceModels，供注册表 / plist 写入。"""
+    """Serialize inferenceModels for registry or plist writing."""
     models = all_provider_inference_models(providers or []) if expose_all else provider_inference_models(provider)
     return json.dumps(
         models,
@@ -136,17 +143,17 @@ def _win_get_key(read_only=False):
 
 
 def _b64_utf8(value: str) -> str:
-    """把字符串编码成 Base64，避免 PowerShell 参数转义问题。"""
+    """Encode a string as Base64 to avoid PowerShell argument escaping issues."""
     return base64.b64encode(str(value or "").encode("utf-8")).decode("ascii")
 
 
 def _ps_single_quote(value: str) -> str:
-    """PowerShell 单引号字符串转义。"""
+    """Escape a single-quoted PowerShell string."""
     return "'" + str(value).replace("'", "''") + "'"
 
 
 def _current_user_sid() -> str:
-    """读取当前登录用户 SID，确保提权后仍写回原用户配置。"""
+    """Read the current logged-in user SID so elevated writes target the original user hive."""
     try:
         result = subprocess.run(
             [
@@ -167,7 +174,7 @@ def _current_user_sid() -> str:
 
 
 def _run_elevated_powershell(script_text: str) -> tuple[bool, str]:
-    """通过 UAC 提权运行临时 PowerShell 脚本。"""
+    """Run a temporary PowerShell script with UAC elevation."""
     fd, script_path = tempfile.mkstemp(prefix="ccds-desktop-config-", suffix=".ps1")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -188,7 +195,7 @@ def _run_elevated_powershell(script_text: str) -> tuple[bool, str]:
         output = "\n".join(part for part in (result.stdout, result.stderr) if part).strip()
         return result.returncode == 0, output
     except subprocess.TimeoutExpired as exc:
-        return False, f"管理员写入超时: {exc}"
+        return False, i18n.t("registry.admin_timeout", error=exc)
     except Exception as exc:
         return False, str(exc)
     finally:
@@ -205,7 +212,7 @@ def _win_apply_config_elevated(
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
 ) -> dict:
-    """权限不足时通过 UAC 写入当前用户的 Claude Desktop policy。"""
+    """Write the current user's Claude Desktop policy via UAC elevation when direct access fails."""
     sid = _current_user_sid()
     target_path = f"Registry::HKEY_USERS\\{sid}\\{REGISTRY_PATH}" if sid else r"HKCU:\SOFTWARE\Policies\Claude"
     script = f"""
@@ -235,16 +242,16 @@ New-ItemProperty -LiteralPath $path -Name '{CCDS_MARKER}' -Value 'true' -Propert
 """
     ok, output = _run_elevated_powershell(script)
     if ok:
-        return {"success": True, "message": "已通过管理员权限写入 Claude 桌面版配置"}
-    detail = output or "用户取消了管理员授权，或系统拒绝提权"
-    return {"success": False, "message": f"需要管理员权限写入 Claude 桌面版配置：{detail}"}
+        return {"success": True, "message": i18n.t("registry.admin_applied")}
+    detail = output or i18n.t("registry.admin_cancelled")
+    return {"success": False, "message": i18n.t("registry.admin_required", detail=detail)}
 
 
 def _win_get_config_status() -> dict:
     import winreg
     key = _win_get_key(read_only=True)
     if key is None:
-        return {"configured": False, "keys": {}, "message": "注册表键不存在"}
+        return {"configured": False, "keys": {}, "message": i18n.t("registry.key_missing")}
     result = {"configured": False, "keys": {}, "message": ""}
     try:
         i = 0
@@ -289,21 +296,21 @@ def _win_apply_config(
         }
         for name, (value, type_) in values.items():
             winreg.SetValueEx(key, name, 0, type_, value)
-        return {"success": True, "message": "Desktop 3P 配置已应用"}
+        return {"success": True, "message": i18n.t("registry.applied")}
     except PermissionError:
         return _win_apply_config_elevated(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
     except Exception as e:
-        return {"success": False, "message": f"配置失败: {str(e)}"}
+        return {"success": False, "message": i18n.t("registry.apply_failed", error=str(e))}
     finally:
         winreg.CloseKey(key)
 
 
 def _win_clear_config() -> dict:
     import winreg
-    # 读取所有键名
+    # Read all existing value names
     key = _win_get_key(read_only=True)
     if key is None:
-        return {"success": True, "message": "注册表键不存在，无需清除"}
+        return {"success": True, "message": i18n.t("registry.key_missing_no_clear")}
     names = []
     try:
         i = 0
@@ -318,17 +325,17 @@ def _win_clear_config() -> dict:
 
     managed = _managed_policy_names(names)
     if not managed:
-        return {"success": True, "message": "没有需要清除的配置"}
+        return {"success": True, "message": i18n.t("registry.nothing_to_clear")}
 
     key = _win_get_key(read_only=False)
     if key is None:
-        return {"success": False, "message": "无法打开注册表"}
+        return {"success": False, "message": i18n.t("registry.open_failed")}
     try:
         for name in managed:
             winreg.DeleteValue(key, name)
-        return {"success": True, "message": f"已清除 {len(managed)} 项配置"}
+        return {"success": True, "message": i18n.t("registry.cleared_count", count=len(managed))}
     except Exception as e:
-        return {"success": False, "message": f"清除失败: {str(e)}"}
+        return {"success": False, "message": i18n.t("registry.clear_failed", error=str(e))}
     finally:
         winreg.CloseKey(key)
 
@@ -342,7 +349,7 @@ MAC_3P_CONFIG_LIBRARY = "configLibrary"
 
 
 def _mac_run(args: list) -> tuple:
-    """运行 defaults 命令，返回 (ok, output)"""
+    """Run a macOS defaults command and return (ok, output)."""
     try:
         r = subprocess.run(args, capture_output=True, text=True, timeout=5)
         output = "\n".join(part.strip() for part in (r.stdout, r.stderr) if part.strip())
@@ -357,7 +364,7 @@ def _mac_get_plist_config_status() -> dict:
         ok, out = _mac_run(["defaults", "read", MAC_BUNDLE, name])
         if ok:
             keys[name] = _safe_config_value(name, out)
-    # 检查标记
+    # Check marker
     ok, marker = _mac_run(["defaults", "read", MAC_BUNDLE, CCDS_MARKER])
     marked = ok and marker == "true"
     configured = keys.get("inferenceProvider") == "gateway" and marked
@@ -388,7 +395,7 @@ def _mac_apply_plist_config(
             if name == "inferenceModels":
                 val = inference_models
             expected[name] = val
-            # 根据 Python 类型选择 defaults 的 -type 参数
+            # Choose defaults -type flag based on Python value type
             if typ == int:
                 ok, out = _mac_run(["defaults", "write", MAC_BUNDLE, name, "-int", str(val)])
             else:
@@ -403,7 +410,7 @@ def _mac_apply_plist_config(
         expected[CCDS_MARKER] = "true"
 
         if failures:
-            return {"success": False, "message": "macOS 配置写入失败: " + "; ".join(failures)}
+            return {"success": False, "message": i18n.t("registry.macos_write_failed", errors="; ".join(failures))}
 
         for name, val in expected.items():
             ok, out = _mac_run(["defaults", "read", MAC_BUNDLE, name])
@@ -414,10 +421,10 @@ def _mac_apply_plist_config(
                 failures.append(f"{name}: readback mismatch")
 
         if failures:
-            return {"success": False, "message": "macOS 配置写入校验失败: " + "; ".join(failures)}
-        return {"success": True, "message": "macOS Desktop 3P 配置已应用"}
+            return {"success": False, "message": i18n.t("registry.macos_verify_failed", errors="; ".join(failures))}
+        return {"success": True, "message": i18n.t("registry.macos_applied")}
     except Exception as e:
-        return {"success": False, "message": f"macOS 配置失败: {str(e)}"}
+        return {"success": False, "message": i18n.t("registry.macos_failed", error=str(e))}
 
 
 def _mac_config_json_path() -> str:
@@ -653,7 +660,7 @@ def _mac_apply_library_config(
 ) -> dict:
     ok, paths, message = _mac_config_library_entry_paths(include_missing_active=True)
     if not ok:
-        return {"success": False, "message": f"configLibrary 元数据读取失败: {message}"}
+        return {"success": False, "message": i18n.t("registry.config_lib_read_failed", error=message)}
     if not paths:
         library_dir = _mac_config_library_dir_path()
         os.makedirs(library_dir, exist_ok=True)
@@ -661,7 +668,7 @@ def _mac_apply_library_config(
         meta = {"appliedId": entry_id}
         ok, message = _mac_write_json_file(_mac_config_library_meta_path(), meta)
         if not ok:
-            return {"success": False, "message": f"configLibrary 元数据写入失败: {message}"}
+            return {"success": False, "message": i18n.t("registry.config_lib_write_failed", error=message)}
         paths = [_mac_config_library_entry_path(entry_id)]
 
     expected = _mac_json_enterprise_config(
@@ -692,8 +699,8 @@ def _mac_apply_library_config(
                 failures.append(f"{os.path.basename(path)}: {name}: readback mismatch")
 
     if failures:
-        return {"success": False, "message": "configLibrary 写入校验失败: " + "; ".join(failures)}
-    return {"success": True, "message": "macOS configLibrary 3P 配置已应用"}
+        return {"success": False, "message": i18n.t("registry.config_lib_verify_failed", errors="; ".join(failures))}
+    return {"success": True, "message": i18n.t("registry.config_lib_applied")}
 
 
 def _mac_apply_json_config(
@@ -705,7 +712,7 @@ def _mac_apply_json_config(
 ) -> dict:
     ok, data, message = _mac_read_json_config()
     if not ok:
-        return {"success": False, "message": f"JSON 配置读取失败: {message}"}
+        return {"success": False, "message": i18n.t("registry.json_read_failed", error=message)}
 
     expected = _mac_json_enterprise_config(
         base_url,
@@ -723,21 +730,21 @@ def _mac_apply_json_config(
 
     ok, message = _mac_write_json_config(data)
     if not ok:
-        return {"success": False, "message": f"JSON 配置写入失败: {message}"}
+        return {"success": False, "message": i18n.t("registry.json_write_failed", error=message)}
 
     ok, saved, message = _mac_read_json_config()
     if not ok:
-        return {"success": False, "message": f"JSON 配置读回失败: {message}"}
+        return {"success": False, "message": i18n.t("registry.json_readback_failed", error=message)}
     saved_enterprise = saved.get("enterpriseConfig")
     if not isinstance(saved_enterprise, dict) or saved.get("deploymentMode") != "3p":
-        return {"success": False, "message": "JSON 配置写入校验失败: deploymentMode 或 enterpriseConfig 不正确"}
+        return {"success": False, "message": i18n.t("registry.json_verify_mode_failed")}
     failures = []
     for name, value in expected.items():
         if saved_enterprise.get(name) != value:
             failures.append(f"{name}: readback mismatch")
     if failures:
-        return {"success": False, "message": "JSON 配置写入校验失败: " + "; ".join(failures)}
-    return {"success": True, "message": "macOS JSON 3P 配置已应用"}
+        return {"success": False, "message": i18n.t("registry.json_verify_failed", errors="; ".join(failures))}
+    return {"success": True, "message": i18n.t("registry.json_applied")}
 
 
 def _mac_get_config_status() -> dict:
@@ -786,16 +793,17 @@ def _mac_apply_config(
     json_result = _mac_apply_json_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
     library_result = _mac_apply_library_config(base_url, gateway_api_key, inference_models, auth_scheme, gateway_headers)
     if plist_result.get("success") and json_result.get("success") and library_result.get("success"):
-        return {"success": True, "message": "macOS Desktop 3P 配置已应用"}
+        return {"success": True, "message": i18n.t("registry.macos_applied")}
 
     failures = []
+    write_failed = i18n.t("registry.write_failed_short")
     if not plist_result.get("success"):
-        failures.append(f"plist: {plist_result.get('message', '写入失败')}")
+        failures.append(f"plist: {plist_result.get('message', write_failed)}")
     if not json_result.get("success"):
-        failures.append(f"json: {json_result.get('message', '写入失败')}")
+        failures.append(f"json: {json_result.get('message', write_failed)}")
     if not library_result.get("success"):
-        failures.append(f"configLibrary: {library_result.get('message', '写入失败')}")
-    return {"success": False, "message": "macOS 配置部分写入失败: " + "; ".join(failures)}
+        failures.append(f"configLibrary: {library_result.get('message', write_failed)}")
+    return {"success": False, "message": i18n.t("registry.macos_partial_write_failed", errors="; ".join(failures))}
 
 
 def _mac_clear_plist_config() -> dict:
@@ -806,16 +814,16 @@ def _mac_clear_plist_config() -> dict:
         if ok:
             count += 1
     if count:
-        return {"success": True, "message": f"已清除 {count} 项配置"}
-    return {"success": True, "message": "没有需要清除的配置"}
+        return {"success": True, "message": i18n.t("registry.cleared_count", count=count)}
+    return {"success": True, "message": i18n.t("registry.nothing_to_clear")}
 
 
 def _mac_clear_json_config() -> dict:
     ok, data, message = _mac_read_json_config()
     if not ok:
-        return {"success": False, "message": f"JSON 配置读取失败: {message}"}
+        return {"success": False, "message": i18n.t("registry.json_read_failed", error=message)}
     if not data:
-        return {"success": True, "message": "JSON 配置不存在，无需清除"}
+        return {"success": True, "message": i18n.t("registry.json_missing_no_clear")}
 
     changed = False
     if "enterpriseConfig" in data:
@@ -825,20 +833,20 @@ def _mac_clear_json_config() -> dict:
         data["deploymentMode"] = "clear"
         changed = True
     if not changed:
-        return {"success": True, "message": "JSON 配置无需清除"}
+        return {"success": True, "message": i18n.t("registry.json_no_clear")}
 
     ok, message = _mac_write_json_config(data)
     if not ok:
-        return {"success": False, "message": f"JSON 配置写入失败: {message}"}
-    return {"success": True, "message": "JSON 3P 配置已清除"}
+        return {"success": False, "message": i18n.t("registry.json_write_failed", error=message)}
+    return {"success": True, "message": i18n.t("registry.json_cleared")}
 
 
 def _mac_clear_library_config() -> dict:
     ok, paths, message = _mac_config_library_entry_paths()
     if not ok:
-        return {"success": False, "message": f"configLibrary 元数据读取失败: {message}"}
+        return {"success": False, "message": i18n.t("registry.config_lib_read_failed", error=message)}
     if not paths:
-        return {"success": True, "message": "configLibrary 不存在，无需清除"}
+        return {"success": True, "message": i18n.t("registry.config_lib_missing_no_clear")}
 
     managed = set(DESKTOP_CONFIG.keys()) | {
         "provider",
@@ -865,8 +873,8 @@ def _mac_clear_library_config() -> dict:
             failures.append(f"{os.path.basename(path)}: write failed: {message}")
 
     if failures:
-        return {"success": False, "message": "configLibrary 清除失败: " + "; ".join(failures)}
-    return {"success": True, "message": "configLibrary 3P 配置已清除"}
+        return {"success": False, "message": i18n.t("registry.config_lib_clear_failed", errors="; ".join(failures))}
+    return {"success": True, "message": i18n.t("registry.config_lib_cleared")}
 
 
 def _mac_clear_config() -> dict:
@@ -874,33 +882,34 @@ def _mac_clear_config() -> dict:
     json_result = _mac_clear_json_config()
     library_result = _mac_clear_library_config()
     if plist_result.get("success") and json_result.get("success") and library_result.get("success"):
-        return {"success": True, "message": "macOS Desktop 3P 配置已清除"}
+        return {"success": True, "message": i18n.t("registry.macos_cleared")}
     failures = []
+    clear_failed = i18n.t("registry.clear_failed_short")
     if not plist_result.get("success"):
-        failures.append(f"plist: {plist_result.get('message', '清除失败')}")
+        failures.append(f"plist: {plist_result.get('message', clear_failed)}")
     if not json_result.get("success"):
-        failures.append(f"json: {json_result.get('message', '清除失败')}")
+        failures.append(f"json: {json_result.get('message', clear_failed)}")
     if not library_result.get("success"):
-        failures.append(f"configLibrary: {library_result.get('message', '清除失败')}")
-    return {"success": False, "message": "macOS 配置部分清除失败: " + "; ".join(failures)}
+        failures.append(f"configLibrary: {library_result.get('message', clear_failed)}")
+    return {"success": False, "message": i18n.t("registry.macos_partial_clear_failed", errors="; ".join(failures))}
 
 
-# ── 统一入口 ──
+# ── Unified Entrypoint ──
 
 def is_configured() -> bool:
-    """检查 Desktop 是否已通过我们的工具配置"""
+    """Return True if Claude Desktop is currently configured by this tool."""
     status = get_config_status()
     return status.get("configured", False)
 
 
 def get_config_status() -> dict:
-    """获取当前 Desktop 配置状态"""
+    """Return the current Claude Desktop configuration status."""
     os_name = _os_name()
     if os_name == "win":
         return _win_get_config_status()
     elif os_name == "mac":
         return _mac_get_config_status()
-    return {"configured": False, "keys": {}, "message": "仅 Windows / macOS 需要配置"}
+    return {"configured": False, "keys": {}, "message": i18n.t("registry.win_mac_only")}
 
 
 def apply_config(
@@ -912,7 +921,7 @@ def apply_config(
     auth_scheme: str = "bearer",
     gateway_headers: str = "",
 ) -> dict:
-    """应用 Desktop 3P 配置"""
+    """Apply Claude Desktop 3P configuration."""
     inference_models = serialize_inference_models(provider, providers=providers, expose_all=expose_all)
     os_name = _os_name()
     if os_name == "win":
@@ -923,7 +932,7 @@ def apply_config(
 
 
 def clear_config() -> dict:
-    """清除 Desktop 3P 配置"""
+    """Clear Claude Desktop 3P configuration."""
     os_name = _os_name()
     if os_name == "win":
         return _win_clear_config()
