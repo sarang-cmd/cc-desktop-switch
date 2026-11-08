@@ -342,6 +342,15 @@ h3 { color: var(--ink); font-weight: 700; }
 .form-panel { padding: clamp(18px, 2.5vw, 30px); }
 .form-panel form > .mb-4 { margin-bottom: 20px !important; }
 .label-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.compact-requests-panel { margin: 20px 0; padding: 15px; border: 2px solid var(--line); border-radius: var(--radius-small); background: var(--surface); }
+.compact-requests-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.compact-requests-heading h3 { margin: 0 0 4px; font-size: 16px; }
+.compact-requests-heading p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.compact-requests-toggle { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; font-size: 12px; font-weight: 700; }
+.compact-requests-toggle input { width: 18px; height: 18px; accent-color: var(--primary); }
+.compact-limits-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.compact-limits-grid label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 650; }
+.compact-requests-warning { margin: 12px 0 0; padding: 10px 12px; border: 2px solid var(--warning); border-radius: var(--radius-small); background: var(--warning-soft); color: var(--ink); font-size: 12px; font-weight: 700; line-height: 1.5; }
 .provider-mapping-section { margin: 26px 0 22px; padding: 20px; border: 2px solid var(--line); border-radius: var(--radius-small); background: var(--well); }
 .patchboard-head { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
 .patchboard-title-block h2 { margin: 5px 0; font-size: 20px; }

@@ -159,6 +159,31 @@
                   <span class="detect-format-status" id="detectFormatStatus"></span>
                 </div>
               </details>
+              <section class="compact-requests-panel" aria-labelledby="compactRequestsTitle">
+                <div class="compact-requests-heading">
+                  <div>
+                    <h3 id="compactRequestsTitle" data-i18n="providersAdd.compactRequestsTitle">Compact requests</h3>
+                    <p data-i18n="providersAdd.compactRequestsHint">Reduce oversized requests for providers with small context or per-minute limits. Off by default.</p>
+                  </div>
+                  <label class="compact-requests-toggle">
+                    <input id="providerCompactRequests" type="checkbox">
+                    <span data-i18n="providersAdd.compactRequestsEnable">Enable Compact requests</span>
+                  </label>
+                </div>
+                <div id="compactRequestsSettings" hidden>
+                  <div class="compact-limits-grid">
+                    <label for="providerCompactSystemLimit">
+                      <span data-i18n="providersAdd.compactSystemLimit">System-prompt character limit</span>
+                      <input class="form-control" id="providerCompactSystemLimit" type="number" min="256" max="50000" step="1" value="4000" disabled>
+                    </label>
+                    <label for="providerCompactMessageLimit">
+                      <span data-i18n="providersAdd.compactMessageLimit">Keep latest messages</span>
+                      <input class="form-control" id="providerCompactMessageLimit" type="number" min="1" max="200" step="1" value="12" disabled>
+                    </label>
+                  </div>
+                  <p class="compact-requests-warning" id="compactRequestsWarning" role="note" data-i18n="providersAdd.compactWarning" hidden>Tools are removed from requests in this mode. File access, web search, artifacts, and other tool actions will not work.</p>
+                </div>
+              </section>
               <section class="provider-mapping-section routing-patchboard" aria-labelledby="patchboardTitle">
                 <div class="patchboard-head">
                   <div class="patchboard-title-block">

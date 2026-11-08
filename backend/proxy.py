@@ -1,5 +1,6 @@
 """Local proxy service: model name translation, request forwarding, and SSE stream processing."""
 
+import copy
 import json
 import os
 import re
@@ -397,10 +398,16 @@ def _is_max_unsupported_error(status_code: int, error_text: str) -> bool:
     )
 
 
-def _redact_sensitive_text(value: str, limit: int = 500) -> str:
+def _redact_sensitive_text(
+    value: str,
+    limit: int = 500,
+    sensitive_values: Optional[list[str]] = None,
+) -> str:
     """Return a redacted summary string safe for logs and diagnostic bundles."""
     text = str(value or "")
-    text = re.sub(r"(?i)(bearer\s+)[a-z0-9._~+/=-]{12,}", r"\1******", text)
+    for secret in sorted({str(item) for item in (sensitive_values or []) if item}, key=len, reverse=True):
+        text = re.sub(re.escape(secret), "******", text, flags=re.I)
+    text = re.sub(r"(?i)(bearer\s+)[a-z0-9._~+/=-]+", r"\1******", text)
     text = re.sub(
         r"(?i)(\b(?:authorization|x-api-key|api[-_]?key|access[-_]?token|refresh[-_]?token|id[-_]?token|client[-_]?secret|token|secret|password|key)\b\s*[:=]\s*[\"']?)[^\"'\s,&<>]+",
         r"\1******",
@@ -420,6 +427,156 @@ def _redact_sensitive_text(value: str, limit: int = 500) -> str:
     text = re.sub(r"([a-z][a-z0-9+.-]*://)([^/@\s:]+):([^/@\s]+)@", r"\1******:******@", text, flags=re.IGNORECASE)
     text = " ".join(text.split())
     return text[:limit]
+
+
+def _provider_secret_values(provider: dict) -> list[str]:
+    """Return configured secret values that could be echoed by an upstream error."""
+    values = [provider.get("apiKey", "")]
+    extra_headers = provider.get("extraHeaders")
+    if isinstance(extra_headers, dict):
+        values.extend(extra_headers.values())
+    return [str(value) for value in values if isinstance(value, str) and value]
+
+
+def _redact_upstream_error_body(value: str, provider: dict) -> str:
+    """Sanitize and truncate an upstream error body before logging or returning it."""
+    return _redact_sensitive_text(value, 500, _provider_secret_values(provider))
+
+
+def _system_prompt_text(system) -> str:
+    if isinstance(system, str):
+        return system
+    if isinstance(system, list):
+        texts = []
+        for block in system:
+            if isinstance(block, str):
+                texts.append(block)
+            elif isinstance(block, dict) and isinstance(block.get("text"), str):
+                texts.append(block["text"])
+        return "\n".join(texts)
+    return ""
+
+
+def _system_prompt_character_count(system) -> int:
+    return len(_system_prompt_text(system))
+
+
+def _request_size_metrics(body: dict, raw_body: Optional[bytes] = None) -> dict:
+    """Estimate request size and prompt shape without logging any request contents."""
+    if raw_body is None:
+        raw_body = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    raw_text = raw_body.decode("utf-8", errors="replace")
+    characters = len(raw_text)
+    tools = body.get("tools")
+    messages = body.get("messages")
+    return {
+        "bytes": len(raw_body),
+        "characters": characters,
+        "estimated_tokens": characters // 4,
+        "system_characters": _system_prompt_character_count(body.get("system")),
+        "tool_count": len(tools) if isinstance(tools, list) else 0,
+        "message_count": len(messages) if isinstance(messages, list) else 0,
+    }
+
+
+def _compact_prompt_text(text: str, limit: int) -> str:
+    if limit <= 0:
+        return ""
+    if len(text) <= limit:
+        return text
+    marker = "\n[…]\n"
+    if limit <= len(marker):
+        start_length = (limit + 1) // 2
+        end_length = limit - start_length
+        return text[:start_length] + (text[-end_length:] if end_length else "")
+    remaining = limit - len(marker)
+    start_length = (remaining + 1) // 2
+    end_length = remaining - start_length
+    return text[:start_length] + marker + (text[-end_length:] if end_length else "")
+
+
+def _compact_system_prompt(system, limit: int):
+    text = _system_prompt_text(system)
+    if len(text) <= limit:
+        return system
+    shortened = _compact_prompt_text(text, limit)
+    if isinstance(system, str):
+        return shortened
+    if isinstance(system, list):
+        result = []
+        inserted = False
+        for block in system:
+            if isinstance(block, dict) and isinstance(block.get("text"), str):
+                if not inserted:
+                    compacted_block = copy.deepcopy(block)
+                    compacted_block["text"] = shortened
+                    result.append(compacted_block)
+                    inserted = True
+            elif isinstance(block, str):
+                if not inserted:
+                    result.append({"type": "text", "text": shortened})
+                    inserted = True
+            else:
+                result.append(copy.deepcopy(block))
+        if not inserted:
+            result.insert(0, {"type": "text", "text": shortened})
+        return result
+    return system
+
+
+def _positive_limit(value, default: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError, OverflowError):
+        parsed = default
+    return max(1, min(maximum, parsed))
+
+
+def _compact_request_body(body: dict, provider: dict) -> dict:
+    """Return a compact copy of an Anthropic-shaped request when enabled."""
+    if provider.get("compactRequests") is not True:
+        return body
+    compacted = copy.deepcopy(body)
+    compacted.pop("tools", None)
+    compacted.pop("tool_choice", None)
+    system_limit = _positive_limit(provider.get("compactSystemPromptLimit"), 4000, 50000)
+    message_limit = _positive_limit(provider.get("compactMessageLimit"), 12, 200)
+    if "system" in compacted:
+        compacted["system"] = _compact_system_prompt(compacted["system"], system_limit)
+    messages = compacted.get("messages")
+    if isinstance(messages, list) and len(messages) > message_limit:
+        compacted["messages"] = messages[-message_limit:]
+    return compacted
+
+
+def _tokens_per_minute_hint(status_code: int, error_text: str) -> Optional[str]:
+    """Explain a 413 that explicitly reports a provider tokens-per-minute limit."""
+    if status_code != 413 or not re.search(
+        r"\btokens?[\s-]*(?:per|/)[\s-]*minute\b|\bTPM\b",
+        error_text or "",
+        re.I,
+    ):
+        return None
+    limit_match = re.search(r"\blimit\s*(?:[:=]|is|of)?\s*([\d,]+)", error_text or "", re.I)
+    requested_match = re.search(r"\brequested\s*(?:[:=]|is)?\s*([\d,]+)", error_text or "", re.I)
+    details = []
+    if limit_match:
+        details.append(i18n.t("proxy.tpm_limit_limit", value=limit_match.group(1)))
+    if requested_match:
+        details.append(i18n.t("proxy.tpm_limit_requested", value=requested_match.group(1)))
+    details_text = f" ({'; '.join(details)})" if details else ""
+    return i18n.t("proxy.tpm_limit_hint", details=details_text)
+
+
+def _log_upstream_error(status_code: int, raw_body: str, safe_body: str) -> Optional[str]:
+    log_buffer.add(
+        "ERROR",
+        i18n.t("proxy.log_upstream_error_body", status=status_code, body=safe_body or "(empty body)"),
+    )
+    hint = _tokens_per_minute_hint(status_code, raw_body)
+    if hint:
+        log_buffer.add("ERROR", hint)
+    return hint
 
 
 def _content_type_header(response: httpx.Response) -> str:
@@ -586,12 +743,14 @@ async def forward_request(
 
     if api_format == "openai_chat":
         upstream_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
-        upstream_body = _anthropic_to_openai_body(body, stream=False)
+        request_body = _compact_request_body(body, provider)
+        upstream_body = _anthropic_to_openai_body(request_body, stream=False)
     else:
         upstream_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
         upstream_body = dict(body)
         upstream_body.pop("stream", None)
         upstream_body = apply_anthropic_request_options(upstream_body, provider)
+        upstream_body = _compact_request_body(upstream_body, provider)
 
     headers = get_upstream_headers(provider)
 
@@ -629,7 +788,8 @@ async def forward_request(
 
         if not resp.is_success:
             raw_error_text = resp.text or i18n.t("proxy.upstream_api_error")
-            error_text = _redact_sensitive_text(raw_error_text)
+            error_text = _redact_upstream_error_body(raw_error_text, provider)
+            tpm_hint = _log_upstream_error(resp.status_code, raw_error_text, error_text)
             if _is_max_unsupported_error(resp.status_code, raw_error_text):
                 return {
                     "id": "msg_hint",
@@ -644,7 +804,7 @@ async def forward_request(
                 "error": {
                     "type": "upstream_error",
                     "status": resp.status_code,
-                    "message": error_text,
+                    "message": tpm_hint or error_text,
                 }
             }
 
@@ -701,11 +861,13 @@ async def forward_request_stream(
 
     if api_format == "openai_chat":
         upstream_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
-        upstream_body = _anthropic_to_openai_body(body, stream=True)
+        request_body = _compact_request_body(body, provider)
+        upstream_body = _anthropic_to_openai_body(request_body, stream=True)
     else:
         upstream_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
         upstream_body = dict(body)
         upstream_body = apply_anthropic_request_options(upstream_body, provider)
+        upstream_body = _compact_request_body(upstream_body, provider)
         upstream_body["stream"] = True
 
     headers = get_upstream_headers(provider)
@@ -733,7 +895,8 @@ async def forward_request_stream(
                 if not resp.is_success:
                     stats.record(False)
                     raw_error_text = (await resp.aread()).decode("utf-8", errors="replace")
-                    error_text = _redact_sensitive_text(raw_error_text)
+                    error_text = _redact_upstream_error_body(raw_error_text, provider)
+                    tpm_hint = _log_upstream_error(resp.status_code, raw_error_text, error_text)
                     if _is_max_unsupported_error(resp.status_code, raw_error_text):
                         model = body.get("model", "")
                         hint = i18n.t("proxy.max_unsupported_hint")
@@ -749,7 +912,7 @@ async def forward_request_stream(
                         "error": {
                             "type": "upstream_error",
                             "status": resp.status_code,
-                            "message": error_text or i18n.t("proxy.upstream_api_error"),
+                            "message": tpm_hint or error_text or i18n.t("proxy.upstream_api_error"),
                         },
                     }
                     yield f"event: error\ndata: {json.dumps(error_event, ensure_ascii=False)}\n\n"
@@ -972,6 +1135,7 @@ def create_proxy_app() -> FastAPI:
 
         request_id = request.headers.get("x-request-id", uuid.uuid4().hex[:12])
         body = await request.json()
+        raw_request_body = await request.body()
 
         if gateway_auth_failed(request):
             return gateway_auth_error()
@@ -996,6 +1160,20 @@ def create_proxy_app() -> FastAPI:
                 status_code=400,
                 content={"error": {"message": "No active provider configured"}},
             )
+
+        size_metrics = _request_size_metrics(body, raw_request_body)
+        log_buffer.add(
+            "INFO",
+            i18n.t(
+                "proxy.log_request_size",
+                bytes=size_metrics["bytes"],
+                chars=size_metrics["characters"],
+                tokens=size_metrics["estimated_tokens"],
+                system=size_metrics["system_characters"],
+                tools=size_metrics["tool_count"],
+                messages=size_metrics["message_count"],
+            ),
+        )
 
         # Model name translation
         original_model = body.get("model", "")
