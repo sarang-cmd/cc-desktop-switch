@@ -1,6 +1,6 @@
 {
   "id": "third-party",
-  "name": "第三方模型",
+  "name": "Custom Third-Party",
   "baseUrl": "",
   "authScheme": "bearer",
   "apiFormat": "anthropic",
@@ -12,8 +12,8 @@
   },
   "modelOptions": {
     "third_party_1m": {
-      "label": "解锁 1M 上下文",
-      "description": "用于 Claude Code/长上下文场景。开启后 Sonnet、Opus 和默认模型使用支持 1M 上下文的模型。",
+      "label": "Unlock 1M Context",
+      "description": "For Claude Code and long-context tasks. Maps Sonnet, Opus, and Default to models that support a 1M context window.",
       "models": {
         "sonnet": "",
         "haiku": "",
@@ -26,8 +26,8 @@
   "requestOptions": {},
   "requestOptionPresets": {
     "third_party_max_effort": {
-      "label": "Max 思维",
-      "description": "Low：更快更省，适合简单任务。\nMedium：速度和效果平衡，适合日常使用。\nHigh：更认真思考，适合复杂代码和排错。\n勾选后：本工具会按 Max 思维转发；未勾选则使用 Claude 当前默认配置。",
+      "label": "Max Thinking",
+      "description": "Low: Faster and more economical for simple tasks.\nMedium: Balanced speed and quality for daily use.\nHigh: Deeper reasoning for complex code and debugging.\nWhen checked: forwards requests with Max effort; when unchecked: uses Claude Desktop default settings.",
       "requestOptions": {
         "anthropic": {
           "thinking": {

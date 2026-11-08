@@ -1,0 +1,15 @@
+{
+  "id": "gemini",
+  "name": "Google Gemini",
+  "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+  "baseUrlHint": "Google AI Studio Gemini OpenAI-compatible endpoint",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "gemini-2.5-pro",
+    "haiku": "gemini-2.5-flash",
+    "opus": "gemini-2.5-pro",
+    "default": "gemini-2.5-pro"
+  },
+  "isBuiltin": true
+}

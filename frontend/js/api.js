@@ -58,7 +58,7 @@
     return data;
   }
 
-  // ── 工具 ──
+  // ── Utilities ──
   const ICON_MAP = {
     deepseek: { logo: 'assets/providers/deepseek.ico' },
     kimi: { logo: 'assets/providers/kimi.ico' },
@@ -74,6 +74,21 @@
     bailian: { logo: 'assets/providers/aliyun.ico' },
     dashscope: { logo: 'assets/providers/aliyun.ico' },
     aliyun: { logo: 'assets/providers/aliyun.ico' },
+    openai: { icon: 'bi-cpu-fill', iconText: 'OA' },
+    groq: { icon: 'bi-lightning-charge-fill', iconText: 'GQ' },
+    mistral: { icon: 'bi-wind', iconText: 'MI' },
+    sarvam: { icon: 'bi-translate', iconText: 'SV' },
+    openrouter: { icon: 'bi-signpost-split-fill', iconText: 'OR' },
+    gemini: { icon: 'bi-stars', iconText: 'GM' },
+    generativelanguage: { icon: 'bi-stars', iconText: 'GM' },
+    xai: { icon: 'bi-slash-square-fill', iconText: 'X' },
+    grok: { icon: 'bi-slash-square-fill', iconText: 'X' },
+    together: { icon: 'bi-boxes', iconText: 'TG' },
+    fireworks: { icon: 'bi-fire', iconText: 'FW' },
+    cerebras: { icon: 'bi-motherboard-fill', iconText: 'CB' },
+    perplexity: { icon: 'bi-compass-fill', iconText: 'PX' },
+    cohere: { icon: 'bi-layers-fill', iconText: 'CO' },
+    ollama: { icon: 'bi-hdd-rack-fill', iconText: 'OL' },
   };
 
   function computeIcon(provider) {
@@ -146,7 +161,7 @@
     };
   }
 
-  // ── 公开 API ──
+  // ── Public API ──
   window.CCApi = {
     async getStatus() {
       const data = await api('GET', '/api/status');
@@ -337,7 +352,7 @@
 
     async detectLocalProxy() {
       const data = await api('GET', '/api/proxy/detect');
-      return data.detected || "";
+      return data.detected || '';
     },
 
     async checkModelAvailability(providerId, model) {

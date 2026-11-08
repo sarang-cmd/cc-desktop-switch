@@ -4,32 +4,32 @@ chcp 65001 >nul
 title CC Desktop Switch
 echo ========================================
 echo    CC Desktop Switch v1.0.26
-echo    正在启动管理后台...
+echo    Starting the admin console...
 echo ========================================
 
 cd /d "%~dp0"
 
 if not defined CCDS_CONFIG_DIR (
     set "CCDS_CONFIG_DIR=%~dp0.tmp\dev-config"
-    echo [信息] 开发启动默认使用独立配置目录:
+    echo [Info] Development startup uses a separate config directory:
     echo        !CCDS_CONFIG_DIR!
 )
 
-REM 检查 Python
+REM Check Python
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] 未检测到 Python，请先安装 Python 3.9+
+    echo [Error] Python was not found. Install Python 3.9+ first.
     pause
     exit /b 1
 )
 
-REM 检查依赖
+REM Check dependencies
 pip show fastapi >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [信息] 首次运行，正在安装依赖...
+    echo [Info] First run detected, installing dependencies...
     pip install -r requirements.txt
     if %errorlevel% neq 0 (
-        echo [错误] 依赖安装失败
+        echo [Error] Dependency installation failed.
         pause
         exit /b 1
     )
@@ -37,6 +37,6 @@ if %errorlevel% neq 0 (
 
 python main.py
 if %errorlevel% neq 0 (
-    echo [错误] 程序异常退出，错误码: %errorlevel%
+    echo [Error] The app exited unexpectedly with code %errorlevel%.
     pause
 )

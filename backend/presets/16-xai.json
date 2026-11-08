@@ -1,0 +1,15 @@
+{
+  "id": "xai",
+  "name": "xAI (Grok)",
+  "baseUrl": "https://api.x.ai/v1",
+  "baseUrlHint": "Official xAI Grok OpenAI-compatible endpoint",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "grok-3",
+    "haiku": "grok-3-mini",
+    "opus": "grok-3",
+    "default": "grok-3"
+  },
+  "isBuiltin": true
+}

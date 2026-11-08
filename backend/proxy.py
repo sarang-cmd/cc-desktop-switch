@@ -1,4 +1,4 @@
-"""本地代理服务 - 模型名翻译 + 请求转发 + SSE 流式处理"""
+"""Local proxy service: model name translation, request forwarding, and SSE stream processing."""
 
 import json
 import os
@@ -12,6 +12,7 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from backend import i18n
 from backend.api_adapters import (
     anthropic_to_openai_chat_body,
     content_to_text,
@@ -30,8 +31,9 @@ from backend.model_alias import (
     resolve_requested_model_slot,
 )
 
+
 def provider_model_ids(provider: Optional[dict]) -> list:
-    """返回当前 provider 配置里的真实上游模型 ID。"""
+    """Return the raw upstream model IDs configured for the given provider."""
     return alias_provider_model_ids(provider)
 
 
@@ -40,7 +42,7 @@ def gateway_models_response(
     providers: Optional[list[dict]] = None,
     expose_all: bool = False,
 ) -> dict:
-    """生成 Anthropic /v1/models 风格的模型列表响应。"""
+    """Build an Anthropic /v1/models style model list response."""
     if expose_all:
         entries = all_provider_model_entries(providers or [])
     else:
@@ -74,7 +76,7 @@ def _configured_desktop_route_names(provider: Optional[dict]) -> set[str]:
 
 
 def _is_unmapped_desktop_route(model_id: str, provider: Optional[dict]) -> bool:
-    """判断请求是否命中了 Claude-safe 但未显式映射的 route。"""
+    """Return True if the request hit a Claude-safe route that is not mapped on this provider."""
     requested = str(model_id or "").strip()
     if not requested:
         return False
@@ -94,16 +96,13 @@ def unmapped_desktop_route_error(model_id: str) -> dict:
     return {
         "error": {
             "type": "invalid_request_error",
-            "message": (
-                f"模型 {model_id} 未在 CC Desktop Switch 中映射，"
-                "请在 Claude Desktop 里选择已映射模型，或重新一键应用配置。"
-            ),
+            "message": i18n.t("proxy.unmapped_model_error", model=model_id),
         }
     }
 
 
 class ProxyStats:
-    """代理统计"""
+    """Proxy request statistics."""
 
     def __init__(self):
         self.total = 0
@@ -134,7 +133,7 @@ class ProxyStats:
 
 
 class LogBuffer:
-    """环形日志缓冲区"""
+    """Ring buffer for proxy logs."""
 
     def __init__(self, max_size=200):
         self._logs = []
@@ -156,13 +155,13 @@ class LogBuffer:
         self._logs = []
 
 
-# 全局单例
+# Global singletons
 stats = ProxyStats()
 log_buffer = LogBuffer()
 
 
 def map_model(original_model: str, provider: Optional[dict]) -> str:
-    """映射模型名：将标准 Claude 模型名映射为提供商的自定义模型名"""
+    """Map a standard Claude model name to the provider's configured upstream model ID."""
     if not provider or not original_model:
         return original_model
 
@@ -174,8 +173,8 @@ def map_model(original_model: str, provider: Optional[dict]) -> str:
     if original_model in custom_models:
         return custom_models[original_model]
 
-    # Claude Desktop 在 gateway 模式可能直接发送 /v1/models 返回的真实模型 ID。
-    # 这种情况下必须透传，避免 deepseek-v4-pro[1m] 被 default 覆盖回普通模型。
+    # Claude Desktop in gateway mode may directly send raw model IDs returned by /v1/models.
+    # Pass them through unchanged so e.g. deepseek-v4-pro[1m] is not overwritten by default.
     if original_model in provider_model_ids(provider):
         return original_model
 
@@ -187,10 +186,10 @@ def map_model(original_model: str, provider: Optional[dict]) -> str:
 
 
 def build_upstream_url(base_url: str, api_format: str) -> str:
-    """根据用户填写的 Base URL 生成最终请求地址。
+    """Build the final upstream request URL from the configured Base URL.
 
-    用户可能填写基础地址，也可能直接粘贴完整 endpoint；这里统一处理，
-    避免重复拼接 /v1/messages 或 /chat/completions。
+    Users may enter either a root Base URL or a full endpoint path; normalize it
+    here to avoid duplicating /v1/messages or /chat/completions.
     """
     clean = str(base_url or "").strip().rstrip("/")
     api_format = normalize_api_format(api_format)
@@ -207,17 +206,17 @@ def build_upstream_url(base_url: str, api_format: str) -> str:
 
 
 def _content_to_text(content) -> str:
-    """把 Anthropic 文本块转换为 OpenAI 兼容接口常见的字符串 content。"""
+    """Convert Anthropic content blocks to a plain string for OpenAI-compatible endpoints."""
     return content_to_text(content)
 
 
 def _anthropic_to_openai_body(body: dict, stream: bool) -> dict:
-    """将 Claude Desktop 发来的 Anthropic Messages 请求转换为 OpenAI Chat。"""
+    """Convert an Anthropic Messages request from Claude Desktop into OpenAI Chat format."""
     return anthropic_to_openai_chat_body(body, stream)
 
 
 def get_upstream_headers(provider: dict) -> dict:
-    """获取上游请求的认证头"""
+    """Build upstream authentication and protocol headers."""
     auth_scheme = provider.get("authScheme", "bearer")
     api_key = provider.get("apiKey", "")
 
@@ -235,18 +234,17 @@ def get_upstream_headers(provider: dict) -> dict:
         else:
             headers["Authorization"] = f"Bearer {api_key}"
 
-    # 合并提供商自定义的额外请求头（如 DeepSeek 需要同时发 x-api-key）
+    # Merge custom extra headers from the provider (supporting {apiKey} interpolation)
     extra = provider.get("extraHeaders", {})
     if isinstance(extra, dict):
         for k, v in extra.items():
-            # 支持 {apiKey} 模板变量
             headers[k] = v.replace("{apiKey}", api_key) if isinstance(v, str) else v
 
     return headers
 
 
 def _provider_kind(provider: dict) -> str:
-    """用名称和 URL 粗略判断提供商，用于处理厂商私有参数。"""
+    """Infer provider family from name and URL for vendor-specific request handling."""
     host = urlsplit(str(provider.get("baseUrl") or "")).netloc.lower()
     if provider.get("supportsDeepSeekMax") is True or host == "api.deepseek.com":
         return "deepseek"
@@ -265,7 +263,7 @@ def _provider_kind(provider: dict) -> str:
 
 
 def _deep_merge(target: dict, source: dict) -> dict:
-    """递归合并少量请求选项，保留已有请求体字段。"""
+    """Recursively merge request option dictionaries while preserving existing fields."""
     merged = dict(target)
     for key, value in source.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -284,11 +282,11 @@ def _anthropic_request_options(provider: dict) -> dict:
 
 
 def apply_anthropic_request_options(upstream_body: dict, provider: dict) -> dict:
-    """按 provider 差异处理 Anthropic 请求里的思考参数。
+    """Handle vendor-specific thinking parameters in Anthropic requests.
 
-    DeepSeek 的 Anthropic 兼容接口支持 thinking 和 output_config.effort=max。
-    其它提供商的 Anthropic 兼容层对这些字段支持不一致，因此默认延续旧行为：
-    不主动透传 request-level thinking，避免上游 400。
+    DeepSeek's Anthropic-compatible endpoint supports thinking and output_config.effort=max.
+    Other vendors' Anthropic compatibility layers vary, so we strip request-level thinking
+    by default to prevent upstream HTTP 400 errors.
     """
     kind = _provider_kind(provider)
     options = _anthropic_request_options(provider)
@@ -315,7 +313,7 @@ def _is_billing_header_text(value: str) -> bool:
 
 
 def _strip_billing_header_from_text(value: str) -> tuple[str, int]:
-    """移除 Claude Code 注入的动态 billing header，保留同块后续有效 system 内容。"""
+    """Strip dynamic billing headers injected by Claude Code while preserving remaining system text."""
     text = str(value or "")
     lines = text.splitlines()
     removed = 0
@@ -328,9 +326,9 @@ def _strip_billing_header_from_text(value: str) -> tuple[str, int]:
 
 
 def rectify_claude_code_billing_header(body: dict, enabled: bool = True) -> int:
-    """清理 Claude Code 通过 LLM gateway 发送的动态 billing header。
+    """Remove dynamic billing headers sent by Claude Code through the LLM gateway.
 
-    只处理 system 字符串或 system 文本块，避免碰用户消息里的普通文本。
+    Only system strings or system text blocks are modified; user messages are untouched.
     """
     if not enabled or not isinstance(body, dict):
         return 0
@@ -369,7 +367,7 @@ def rectify_claude_code_billing_header(body: dict, enabled: bool = True) -> int:
 
 
 def _is_max_unsupported_error(status_code: int, error_text: str) -> bool:
-    """只把明确拒绝 thinking/effort 字段的 400/422 识别为 Max 不兼容。"""
+    """Identify 400/422 errors that explicitly reject thinking/effort fields as Max-unsupported."""
     if status_code not in (400, 422):
         return False
     text = (error_text or "").lower()
@@ -400,7 +398,7 @@ def _is_max_unsupported_error(status_code: int, error_text: str) -> bool:
 
 
 def _redact_sensitive_text(value: str, limit: int = 500) -> str:
-    """返回可用于日志和诊断包的脱敏文本摘要。"""
+    """Return a redacted summary string safe for logs and diagnostic bundles."""
     text = str(value or "")
     text = re.sub(r"(?i)(bearer\s+)[a-z0-9._~+/=-]{12,}", r"\1******", text)
     text = re.sub(
@@ -453,11 +451,7 @@ def _invalid_upstream_response_error(
             "bodyPreview": body_preview,
             "upstreamHost": _upstream_host(upstream_url),
             "apiFormat": api_format,
-            "message": (
-                "上游 API 返回了非 JSON 响应。"
-                "这通常表示中转返回了 HTML/文本错误页、鉴权失败页、路径不匹配，"
-                "或该中转并不完全兼容当前选择的 API 格式。"
-            ),
+            "message": i18n.t("proxy.non_json_error"),
         }
     }
 
@@ -466,7 +460,7 @@ def _log_invalid_upstream_response(response: httpx.Response, preview: str):
     log_buffer.add(
         "ERROR",
         (
-            "上游返回非 JSON："
+            f"{i18n.t('proxy.log_non_json_prefix')}"
             f"HTTP {response.status_code}, content-type={_content_type_header(response) or 'unknown'}, "
             f"preview={preview or '(empty)'}"
         ),
@@ -479,11 +473,7 @@ def _is_socks_dependency_error(exc: Exception) -> bool:
 
 
 def _socks_dependency_error_message() -> str:
-    return (
-        "当前上游代理使用了 SOCKS 地址，但安装包缺少 SOCKS 代理依赖。"
-        "请升级到包含 SOCKS 支持的版本；临时解决办法是改用 HTTP 代理，"
-        "或关闭“上游代理”。"
-    )
+    return i18n.t("proxy.socks_missing_error")
 
 
 def _proxy_log_value(proxy: str) -> str:
@@ -492,11 +482,12 @@ def _proxy_log_value(proxy: str) -> str:
 
 def _connection_error_message(proxy: Optional[str], message: str) -> str:
     if proxy:
-        return (
-            f"通过上游代理 {_proxy_log_value(proxy)} 连接上游 API 失败: {message}。"
-            "请确认代理地址可用，或先关闭“上游代理”。"
+        return i18n.t(
+            "proxy.connect_error_via_proxy",
+            proxy=_proxy_log_value(proxy),
+            error=message,
         )
-    return f"连接上游 API 失败: {message}。请检查网络连接和 API 地址是否正确。"
+    return i18n.t("proxy.connect_error_direct", error=message)
 
 
 def _stream_content_type_compatible(response: httpx.Response) -> bool:
@@ -512,7 +503,7 @@ def _stream_content_type_compatible(response: httpx.Response) -> bool:
 
 
 def _normalize_usage(usage) -> dict:
-    """保证 Anthropic usage 至少包含 input_tokens / output_tokens。"""
+    """Ensure Anthropic usage objects always include integer input_tokens and output_tokens."""
     def token_int(value) -> int:
         try:
             return int(value or 0)
@@ -536,7 +527,7 @@ def _normalize_usage(usage) -> dict:
 
 
 def _normalize_content(content) -> list:
-    """把常见上游 content 变体整理成 Anthropic content block。"""
+    """Normalize common upstream content variants into Anthropic content blocks."""
     if isinstance(content, list):
         return content
     if isinstance(content, str):
@@ -547,7 +538,7 @@ def _normalize_content(content) -> list:
 
 
 def _normalize_anthropic_message(message: dict, model: str) -> dict:
-    """补齐 Claude Desktop 对 Anthropic message 响应常用字段的期望。"""
+    """Populate fields expected by Claude Desktop on Anthropic message responses."""
     normalized = dict(message) if isinstance(message, dict) else {}
     normalized.setdefault("id", f"msg_{uuid.uuid4().hex[:12]}")
     normalized.setdefault("type", "message")
@@ -559,7 +550,7 @@ def _normalize_anthropic_message(message: dict, model: str) -> dict:
 
 
 def _normalize_anthropic_response(upstream_data: dict, model: str) -> dict:
-    """规范 Anthropic 兼容响应，避免桌面端访问 usage.input_tokens 报错。"""
+    """Normalize Anthropic-compatible responses so Claude Desktop can safely read usage.input_tokens."""
     if not isinstance(upstream_data, dict) or upstream_data.get("error"):
         return upstream_data
     if upstream_data.get("type") == "message" or "content" in upstream_data:
@@ -568,7 +559,7 @@ def _normalize_anthropic_response(upstream_data: dict, model: str) -> dict:
 
 
 def _normalize_anthropic_sse_event(event: dict, model: str) -> dict:
-    """规范 Anthropic 兼容 SSE 事件中的 usage 字段。"""
+    """Normalize usage fields inside Anthropic-compatible SSE events."""
     if not isinstance(event, dict):
         return event
     normalized = dict(event)
@@ -590,29 +581,33 @@ async def forward_request(
     provider: dict,
     request_id: str,
 ) -> dict:
-    """转发请求到上游 API（非流式）"""
+    """Forward a non-streaming request to the upstream API."""
     api_format = normalize_api_format(provider.get("apiFormat", "anthropic"))
 
     if api_format == "openai_chat":
         upstream_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
         upstream_body = _anthropic_to_openai_body(body, stream=False)
     else:
-        # Anthropic 格式透传
         upstream_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
-
-        # 移除流式标记（我们单独处理流式）
         upstream_body = dict(body)
         upstream_body.pop("stream", None)
         upstream_body = apply_anthropic_request_options(upstream_body, provider)
 
     headers = get_upstream_headers(provider)
 
-    log_buffer.add("INFO", f"转发请求 → {upstream_url}")
-    log_buffer.add("INFO", f"模型: {body.get('model', '')} → {upstream_body.get('model', '')}")
+    log_buffer.add("INFO", i18n.t("proxy.log_forward", url=upstream_url))
+    log_buffer.add(
+        "INFO",
+        i18n.t(
+            "proxy.log_model",
+            src=body.get("model", ""),
+            dst=upstream_body.get("model", ""),
+        ),
+    )
 
     proxy = _get_http_proxy()
     if proxy:
-        log_buffer.add("INFO", f"使用上游代理: {_proxy_log_value(proxy)}")
+        log_buffer.add("INFO", i18n.t("proxy.log_upstream_proxy", proxy=_proxy_log_value(proxy)))
 
     try:
         async with httpx.AsyncClient(timeout=120.0, proxy=proxy) as client:
@@ -625,11 +620,15 @@ async def forward_request(
         stats.record(resp.is_success)
         log_buffer.add(
             "SUCCESS" if resp.is_success else "ERROR",
-            f"响应 {resp.status_code} ({round(resp.elapsed.total_seconds(), 2)}s)",
+            i18n.t(
+                "proxy.log_response",
+                status=resp.status_code,
+                seconds=round(resp.elapsed.total_seconds(), 2),
+            ),
         )
 
         if not resp.is_success:
-            raw_error_text = resp.text or "上游 API 返回错误"
+            raw_error_text = resp.text or i18n.t("proxy.upstream_api_error")
             error_text = _redact_sensitive_text(raw_error_text)
             if _is_max_unsupported_error(resp.status_code, raw_error_text):
                 return {
@@ -637,7 +636,7 @@ async def forward_request(
                     "type": "message",
                     "role": "assistant",
                     "model": body.get("model", ""),
-                    "content": [{"type": "text", "text": "该模型不支持 max，请取消勾选。"}],
+                    "content": [{"type": "text", "text": i18n.t("proxy.max_unsupported_hint")}],
                     "stop_reason": "end_turn",
                     "usage": {"input_tokens": 0, "output_tokens": 0},
                 }
@@ -659,24 +658,23 @@ async def forward_request(
             return _invalid_upstream_response_error(resp, upstream_url, api_format, preview)
 
         if api_format == "openai_chat":
-            # OpenAI → Anthropic 格式转换
             return _openai_to_anthropic(upstream_data, body.get("model", ""))
         return _normalize_anthropic_response(upstream_data, body.get("model", ""))
 
     except httpx.TimeoutException:
         stats.record(False)
-        log_buffer.add("ERROR", "请求超时")
+        log_buffer.add("ERROR", i18n.t("proxy.log_timeout"))
         return {
             "error": {
                 "type": "timeout",
-                "message": "上游 API 请求超时。若在中国大陆使用，请检查本地网络是否能稳定访问该 API 地址。",
+                "message": i18n.t("proxy.timeout_error"),
             }
         }
     except Exception as e:
         stats.record(False)
         message = f"{e.__class__.__name__}: {str(e)}".rstrip()
         if _is_socks_dependency_error(e):
-            log_buffer.add("ERROR", f"SOCKS 代理依赖缺失: {message}")
+            log_buffer.add("ERROR", i18n.t("proxy.log_socks_missing", error=message))
             return {
                 "error": {
                     "type": "socks_proxy_dependency_missing",
@@ -684,7 +682,7 @@ async def forward_request(
                 }
             }
         proxy = _get_http_proxy()
-        log_buffer.add("ERROR", f"请求失败: {message}")
+        log_buffer.add("ERROR", i18n.t("proxy.log_request_failed", error=message))
         return {
             "error": {
                 "type": "connection_error",
@@ -698,7 +696,7 @@ async def forward_request_stream(
     provider: dict,
     request_id: str,
 ):
-    """转发流式请求到上游 API（SSE）"""
+    """Forward a streaming request to the upstream API (SSE)."""
     api_format = normalize_api_format(provider.get("apiFormat", "anthropic"))
 
     if api_format == "openai_chat":
@@ -708,16 +706,15 @@ async def forward_request_stream(
         upstream_url = build_upstream_url(provider.get("baseUrl", ""), api_format)
         upstream_body = dict(body)
         upstream_body = apply_anthropic_request_options(upstream_body, provider)
-        # 确保流式开启
         upstream_body["stream"] = True
 
     headers = get_upstream_headers(provider)
 
-    log_buffer.add("INFO", f"流式请求 → {upstream_url}")
+    log_buffer.add("INFO", i18n.t("proxy.log_stream_forward", url=upstream_url))
 
     proxy = _get_http_proxy()
     if proxy:
-        log_buffer.add("INFO", f"使用上游代理: {_proxy_log_value(proxy)}")
+        log_buffer.add("INFO", i18n.t("proxy.log_upstream_proxy", proxy=_proxy_log_value(proxy)))
 
     try:
         async with httpx.AsyncClient(timeout=300.0, proxy=proxy) as client:
@@ -730,7 +727,7 @@ async def forward_request_stream(
 
                 log_buffer.add(
                     "SUCCESS" if resp.is_success else "ERROR",
-                    f"流式连接 {resp.status_code}",
+                    i18n.t("proxy.log_stream_connected", status=resp.status_code),
                 )
 
                 if not resp.is_success:
@@ -739,7 +736,7 @@ async def forward_request_stream(
                     error_text = _redact_sensitive_text(raw_error_text)
                     if _is_max_unsupported_error(resp.status_code, raw_error_text):
                         model = body.get("model", "")
-                        hint = "该模型不支持 max，请取消勾选。"
+                        hint = i18n.t("proxy.max_unsupported_hint")
                         yield f'event: message_start\ndata: {{"type":"message_start","message":{{"id":"msg_hint","type":"message","role":"assistant","content":[],"model":"{model}","stop_reason":null,"stop_sequence":null,"usage":{{"input_tokens":0,"output_tokens":0}}}}}}\n\n'
                         yield f'event: content_block_start\ndata: {{"type":"content_block_start","index":0,"content_block":{{"type":"text","text":""}}}}\n\n'
                         yield f'event: content_block_delta\ndata: {{"type":"content_block_delta","index":0,"delta":{{"type":"text_delta","text":"{hint}"}}}}\n\n'
@@ -752,7 +749,7 @@ async def forward_request_stream(
                         "error": {
                             "type": "upstream_error",
                             "status": resp.status_code,
-                            "message": error_text or "上游 API 返回错误",
+                            "message": error_text or i18n.t("proxy.upstream_api_error"),
                         },
                     }
                     yield f"event: error\ndata: {json.dumps(error_event, ensure_ascii=False)}\n\n"
@@ -831,16 +828,16 @@ async def forward_request_stream(
                         yield line + "\n"
 
                 stats.record(True)
-                log_buffer.add("SUCCESS", f"流式完成")
+                log_buffer.add("SUCCESS", i18n.t("proxy.log_stream_done"))
 
     except httpx.TimeoutException:
         stats.record(False)
-        log_buffer.add("ERROR", "流式请求超时")
+        log_buffer.add("ERROR", i18n.t("proxy.log_stream_timeout"))
         error_event = {
             "type": "error",
             "error": {
                 "type": "timeout",
-                "message": "上游 API 流式请求超时。若在中国大陆使用，请检查本地网络是否能稳定访问该 API 地址。",
+                "message": i18n.t("proxy.stream_timeout_error"),
             },
         }
         yield f"event: error\ndata: {json.dumps(error_event, ensure_ascii=False)}\n\n"
@@ -848,7 +845,7 @@ async def forward_request_stream(
         stats.record(False)
         message = f"{e.__class__.__name__}: {str(e)}".rstrip()
         if _is_socks_dependency_error(e):
-            log_buffer.add("ERROR", f"SOCKS 代理依赖缺失: {message}")
+            log_buffer.add("ERROR", i18n.t("proxy.log_socks_missing", error=message))
             error_event = {
                 "type": "error",
                 "error": {
@@ -859,7 +856,7 @@ async def forward_request_stream(
             yield f"event: error\ndata: {json.dumps(error_event, ensure_ascii=False)}\n\n"
             return
         proxy = _get_http_proxy()
-        log_buffer.add("ERROR", f"流式请求失败: {message}")
+        log_buffer.add("ERROR", i18n.t("proxy.log_stream_failed", error=message))
         error_event = {
             "type": "error",
             "error": {
@@ -871,33 +868,30 @@ async def forward_request_stream(
 
 
 def _openai_to_anthropic(openai_resp: dict, model: str) -> dict:
-    """将 OpenAI 响应格式转换为 Anthropic 格式"""
+    """Convert an OpenAI Chat response into Anthropic Messages format."""
     return openai_chat_to_anthropic(openai_resp, model)
 
 
 def _openai_chunk_to_anthropic(chunk: dict, model: str) -> dict:
-    """将 OpenAI 流式块转换为 Anthropic SSE 格式"""
+    """Convert an OpenAI streaming chunk into Anthropic SSE format."""
     return openai_chat_chunk_to_anthropic(chunk, model)
 
 
-# ========== FastAPI 应用 ==========
+# ========== FastAPI Application ==========
 
 from backend.config import get_active_provider, get_gateway_api_key, get_providers, get_settings
 
 
 def _get_http_proxy() -> Optional[str]:
-    """获取用户配置的上游代理地址，优先读取设置中的 upstreamProxy，
-    其次回退到系统环境变量 HTTP_PROXY / HTTPS_PROXY / ALL_PROXY。"""
+    """Return the configured upstream proxy URL, falling back to HTTP_PROXY / HTTPS_PROXY / ALL_PROXY."""
     settings = get_settings()
     if not settings.get("upstreamProxyEnabled", True):
         return None
     configured = str(settings.get("upstreamProxy") or "").strip()
     if configured:
-        # 允许用户只写 host:port，自动补全 http:// 前缀
         if "://" not in configured:
             configured = f"http://{configured}"
         return configured
-    # 回退到环境变量（httpx 默认行为，但这里显式读取便于日志展示）
     for env in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"):
         val = os.environ.get(env, os.environ.get(env.lower(), "")).strip()
         if val:
@@ -906,11 +900,11 @@ def _get_http_proxy() -> Optional[str]:
 
 
 def create_proxy_app() -> FastAPI:
-    """创建代理 FastAPI 应用"""
+    """Create the local proxy FastAPI application."""
     app = FastAPI(title="CC Desktop Switch Proxy", version="1.0.26")
 
     def upstream_error_status(result: dict) -> int:
-        """把上游错误转换成 HTTP 错误状态，避免桌面端按成功响应解析。"""
+        """Convert upstream errors into HTTP error status codes so Claude Desktop does not treat them as 200 OK."""
         error = result.get("error") if isinstance(result, dict) else None
         status = error.get("status") if isinstance(error, dict) else None
         try:
@@ -929,7 +923,7 @@ def create_proxy_app() -> FastAPI:
         return gateway_api_key not in {bearer_token, x_api_key}
 
     def gateway_auth_error() -> JSONResponse:
-        log_buffer.add("ERROR", "本地 gateway 认证失败")
+        log_buffer.add("ERROR", i18n.t("proxy.log_gateway_auth_failed"))
         return JSONResponse(
             status_code=401,
             content={"error": {"message": "Invalid gateway API key"}},
@@ -988,26 +982,26 @@ def create_proxy_app() -> FastAPI:
             enabled=settings.get("enableBillingHeaderRectifier") is not False,
         )
         if removed_billing_headers:
-            log_buffer.add("INFO", f"已清理 Claude Code billing header: removedCount={removed_billing_headers}")
+            log_buffer.add("INFO", i18n.t("proxy.log_billing_header_stripped", count=removed_billing_headers))
         expose_all = bool(settings.get("exposeAllProviderModels"))
         providers = get_providers() if expose_all else []
-        # 获取当前激活的提供商；全量模型模式下允许模型别名路由到其它 provider。
+        # Get the active provider; when exposeAllProviderModels is enabled, allow model aliases to route to other providers.
         provider = get_active_provider()
         alias_provider, alias_model, alias_hit = resolve_model_alias(providers, body.get("model", "")) if expose_all else (None, "", False)
         if alias_hit and alias_provider:
             provider = alias_provider
         if not provider or not provider.get("apiKey"):
-            log_buffer.add("ERROR", "没有配置有效的提供商")
+            log_buffer.add("ERROR", i18n.t("proxy.log_no_active_provider"))
             return JSONResponse(
                 status_code=400,
                 content={"error": {"message": "No active provider configured"}},
             )
 
-        # 模型名翻译
+        # Model name translation
         original_model = body.get("model", "")
         route_model = alias_model if alias_hit else original_model
         if _is_unmapped_desktop_route(route_model, provider):
-            log_buffer.add("ERROR", f"未映射模型: {route_model}")
+            log_buffer.add("ERROR", i18n.t("proxy.log_unmapped_model", model=route_model))
             return JSONResponse(
                 status_code=400,
                 content=unmapped_desktop_route_error(route_model),
@@ -1015,19 +1009,13 @@ def create_proxy_app() -> FastAPI:
         mapped_model = map_model(route_model, provider)
         body["model"] = mapped_model
 
-        log_buffer.add("INFO", f"请求: POST /v1/messages")
-        log_buffer.add("INFO", f"模型映射: {original_model} → {mapped_model}")
+        log_buffer.add("INFO", i18n.t("proxy.log_request_post"))
+        log_buffer.add("INFO", i18n.t("proxy.log_model_mapping", src=original_model, dst=mapped_model))
 
-        # 检测 tools 使用场景，给出友好提示
+        # Warn if tools are sent to DeepSeek's Anthropic-compatible endpoint
         if body.get("tools") and _provider_kind(provider) == "deepseek":
-            log_buffer.add(
-                "WARNING",
-                "请求包含 tools，但 DeepSeek Anthropic 兼容接口当前不支持工具调用（Tools/MCP）。"
-                "如果后续出现搜索外网或访问 GitHub 失败，属于 Claude Desktop 本地工具调用的网络问题，"
-                "与 DeepSeek API 无关。建议检查本地网络环境或关闭相关工具。",
-            )
+            log_buffer.add("WARNING", i18n.t("proxy.log_deepseek_tools_warn"))
 
-        # 判断是否流式
         is_stream = body.get("stream", False)
 
         if is_stream:

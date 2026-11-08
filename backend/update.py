@@ -1,12 +1,12 @@
-"""自动更新检查和下载协议。"""
+"""Auto-update checking and download protocol."""
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import os
 import platform as platform_module
 import re
-import base64
 import sys
 import tempfile
 from pathlib import Path
@@ -15,27 +15,29 @@ from urllib.parse import urlparse
 
 import httpx
 
+from backend import i18n
 
-# ── 下载进度（内存状态，仅用于前端轮询） ──
+
+# ── Download Progress (in-memory state polled by frontend) ──
 _download_progress: dict[str, Any] = {"active": False, "percent": 0, "message": ""}
 
 
 def get_download_progress() -> dict[str, Any]:
-    """返回当前下载进度。"""
+    """Return the current download progress."""
     return dict(_download_progress)
 
 
 def set_download_progress(active: bool = False, percent: int = 0, message: str = "") -> None:
-    """更新下载进度。"""
+    """Update the current download progress."""
     _download_progress.update({"active": active, "percent": percent, "message": message})
 
 
 class UpdateCheckError(Exception):
-    """更新检查失败。"""
+    """Update check failure."""
 
 
 def current_platform(sys_platform: str | None = None, machine: str | None = None) -> str:
-    """返回 latest.json 中使用的平台键。"""
+    """Return the platform key used in latest.json."""
     raw_platform = sys_platform or sys.platform
     raw_machine = (machine or platform_module.machine() or "").lower()
     if raw_machine in {"amd64", "x86_64"}:
@@ -61,7 +63,7 @@ def _version_parts(version: str) -> list[int]:
 
 
 def is_newer_version(latest: str, current: str) -> bool:
-    """比较两个语义版本号，latest 大于 current 时返回 True。"""
+    """Compare two semantic versions and return True when latest > current."""
     latest_parts = _version_parts(latest)
     current_parts = _version_parts(current)
     width = max(len(latest_parts), len(current_parts))
@@ -73,15 +75,15 @@ def is_newer_version(latest: str, current: str) -> bool:
 def _validate_update_url(url: str) -> str:
     parsed = urlparse((url or "").strip())
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise UpdateCheckError("更新地址必须是 http 或 https URL")
+        raise UpdateCheckError(i18n.t("update.invalid_url_scheme"))
     return parsed.geturl()
 
 
 def _safe_asset_name(name: str) -> str:
-    """只保留文件名，避免 latest.json 里带路径造成覆盖风险。"""
+    """Keep only the base filename to prevent path traversal from latest.json."""
     filename = Path(str(name or "").strip()).name
     if not filename:
-        raise UpdateCheckError("更新资产缺少文件名")
+        raise UpdateCheckError(i18n.t("update.missing_filename"))
     return filename
 
 
@@ -97,21 +99,21 @@ def _pick_platform(latest_json: dict[str, Any], platform: str) -> dict[str, Any]
     platforms = latest_json.get("platforms") or {}
     data = platforms.get(platform)
     if not isinstance(data, dict):
-        raise UpdateCheckError(f"latest.json 中没有 {platform} 平台资产")
+        raise UpdateCheckError(i18n.t("update.no_platform_assets", platform=platform))
     return data
 
 
 def pick_windows_installer(assets: list[dict[str, Any]]) -> dict[str, Any]:
-    """优先选择安装包资产，避免把便携版 zip 或单文件 exe 当成安装器。"""
+    """Prefer the Windows setup installer over portable zip or single-file exe assets."""
     for asset in assets:
         name = str(asset.get("name") or "").lower()
         if name.endswith("windows-setup.exe"):
             return asset
-    raise UpdateCheckError("当前版本没有 Windows 安装包资产")
+    raise UpdateCheckError(i18n.t("update.no_windows_installer"))
 
 
 def pick_macos_installer(assets: list[dict[str, Any]]) -> dict[str, Any]:
-    """优先选择 macOS PKG 安装器，DMG 作为拖拽安装兜底。"""
+    """Prefer the macOS PKG installer, with DMG as a fallback."""
     candidates = []
     for asset in assets:
         name = str(asset.get("name") or "").lower()
@@ -121,16 +123,16 @@ def pick_macos_installer(assets: list[dict[str, Any]]) -> dict[str, Any]:
             candidates.append(asset)
     if candidates:
         return candidates[0]
-    raise UpdateCheckError("当前版本没有 macOS 安装资产")
+    raise UpdateCheckError(i18n.t("update.no_macos_installer"))
 
 
 def pick_platform_installer(assets: list[dict[str, Any]], platform: str) -> dict[str, Any]:
-    """按平台选择可直接启动的安装资产。"""
+    """Select the launchable installer asset for the given platform."""
     if platform.startswith("windows-"):
         return pick_windows_installer(assets)
     if platform.startswith("macos-"):
         return pick_macos_installer(assets)
-    raise UpdateCheckError(f"当前平台暂不支持应用内安装: {platform}")
+    raise UpdateCheckError(i18n.t("update.unsupported_platform", platform=platform))
 
 
 def _allowed_install_extensions(platform: str) -> tuple[str, ...]:
@@ -142,18 +144,18 @@ def _allowed_install_extensions(platform: str) -> tuple[str, ...]:
 
 
 def install_command(path: str, platform: str) -> list[str]:
-    """返回启动已下载安装资产的命令。"""
+    """Return the command to launch a downloaded installer asset."""
     if platform.startswith("windows-"):
         return [path]
     if platform.startswith("macos-"):
         return ["open", path]
-    raise UpdateCheckError(f"当前平台暂不支持应用内安装: {platform}")
+    raise UpdateCheckError(i18n.t("update.unsupported_platform", platform=platform))
 
 
 def install_after_quit_command(path: str, platform: str, wait_for_pid: int) -> list[str]:
-    """返回等待当前进程退出后再启动安装器的命令。"""
+    """Return the helper command that waits for the current process to exit before launching the installer."""
     if wait_for_pid <= 0:
-        raise UpdateCheckError("等待退出的进程 ID 无效")
+        raise UpdateCheckError(i18n.t("update.invalid_wait_pid"))
     if platform.startswith("windows-"):
         escaped_path = str(path).replace("'", "''")
         script = (
@@ -208,20 +210,20 @@ async def fetch_latest_json(url: str) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(safe_url)
             response.raise_for_status()
-            # 兼容少数发布工具写出的 UTF-8 BOM，同时保持正常 JSON 路径。
+            # Support UTF-8 BOM written by some release tools while keeping standard JSON parsing.
             data = response.json()
     except httpx.HTTPError as exc:
-        raise UpdateCheckError(f"更新地址请求失败: {exc}") from exc
+        raise UpdateCheckError(i18n.t("update.request_failed", error=exc)) from exc
     except ValueError as exc:
         try:
             import json
 
             data = json.loads(response.content.decode("utf-8-sig"))
         except Exception as sig_exc:
-            raise UpdateCheckError("更新地址返回的不是有效 JSON") from sig_exc
+            raise UpdateCheckError(i18n.t("update.invalid_json")) from sig_exc
 
     if not isinstance(data, dict):
-        raise UpdateCheckError("latest.json 格式错误")
+        raise UpdateCheckError(i18n.t("update.invalid_manifest"))
     return data
 
 
@@ -233,12 +235,12 @@ async def check_update(
     latest_json = await fetch_latest_json(url)
     latest_version = str(latest_json.get("version") or "")
     if not latest_version:
-        raise UpdateCheckError("latest.json 缺少 version 字段")
+        raise UpdateCheckError(i18n.t("update.missing_version"))
 
     platform_data = _pick_platform(latest_json, platform)
     assets = platform_data.get("assets") or []
     if not isinstance(assets, list):
-        raise UpdateCheckError("latest.json assets 字段格式错误")
+        raise UpdateCheckError(i18n.t("update.invalid_assets"))
 
     return {
         "success": True,
@@ -259,15 +261,15 @@ async def download_asset(
     target_dir: str | Path | None = None,
     platform: str = "windows-x64",
 ) -> dict[str, Any]:
-    """下载资产并按 latest.json 中的 sha256 校验。"""
+    """Download an installer asset and verify its sha256 against latest.json."""
     url = _validate_update_url(str(asset.get("url") or ""))
     filename = _safe_asset_name(str(asset.get("name") or Path(urlparse(url).path).name))
     allowed_extensions = _allowed_install_extensions(platform)
     if not allowed_extensions:
-        raise UpdateCheckError(f"当前平台暂不支持应用内安装: {platform}")
+        raise UpdateCheckError(i18n.t("update.unsupported_platform", platform=platform))
     if not filename.lower().endswith(allowed_extensions):
         allowed = " / ".join(allowed_extensions)
-        raise UpdateCheckError(f"当前平台只能下载安装资产: {allowed}")
+        raise UpdateCheckError(i18n.t("update.only_installer_allowed", allowed=allowed))
 
     updates_dir = Path(target_dir or Path(tempfile.gettempdir()) / "CC-Desktop-Switch" / "updates")
     updates_dir.mkdir(parents=True, exist_ok=True)
@@ -280,7 +282,11 @@ async def download_asset(
                 response.raise_for_status()
                 total_size = int(response.headers.get("Content-Length", 0))
                 downloaded = 0
-                set_download_progress(active=True, percent=0, message="开始下载...")
+                set_download_progress(
+                    active=True,
+                    percent=0,
+                    message=i18n.t("update.download_starting"),
+                )
                 with partial.open("wb") as handle:
                     async for chunk in response.aiter_bytes():
                         if chunk:
@@ -291,16 +297,20 @@ async def download_asset(
                                 set_download_progress(
                                     active=True,
                                     percent=percent,
-                                    message=f"下载中 {percent}%",
+                                    message=i18n.t("update.downloading_percent", percent=percent),
                                 )
-                set_download_progress(active=True, percent=100, message="下载完成，正在校验...")
+                set_download_progress(
+                    active=True,
+                    percent=100,
+                    message=i18n.t("update.verifying"),
+                )
     except httpx.HTTPError as exc:
         partial.unlink(missing_ok=True)
-        raise UpdateCheckError(f"下载安装包失败: {exc}") from exc
+        raise UpdateCheckError(i18n.t("update.download_failed_detail", error=exc)) from exc
     except OSError as exc:
         set_download_progress(active=False, percent=0, message="")
         partial.unlink(missing_ok=True)
-        raise UpdateCheckError(f"写入安装包失败: {exc}") from exc
+        raise UpdateCheckError(i18n.t("update.write_failed_detail", error=exc)) from exc
     finally:
         set_download_progress(active=False, percent=0, message="")
 
@@ -308,7 +318,7 @@ async def download_asset(
     expected_sha = str(asset.get("sha256") or "").strip().lower()
     if expected_sha and actual_sha.lower() != expected_sha:
         partial.unlink(missing_ok=True)
-        raise UpdateCheckError("安装包校验失败，已取消安装")
+        raise UpdateCheckError(i18n.t("update.checksum_failed"))
 
     os.replace(partial, target)
     return {
@@ -325,13 +335,14 @@ async def download_update(
     platform: str = "windows-x64",
     target_dir: str | Path | None = None,
 ) -> dict[str, Any]:
-    """检查更新，确认落后时下载当前平台安装包。"""
+    """Check for updates and download the platform installer when a newer release exists."""
     result = await check_update(url, current_version, platform)
     if not result.get("updateAvailable"):
         return {
             **result,
             "downloaded": False,
-            "message": "当前已是最新版本",
+            "code": "up_to_date",
+            "message": i18n.t("update.up_to_date"),
         }
 
     installer_asset = pick_platform_installer(result.get("assets") or [], platform)

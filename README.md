@@ -2,8 +2,8 @@
 
 <p align="center">
   <a href="README.md">English</a> |
-  <a href="README.zh-CN.md">简体中文</a> |
-  <a href="README.ja.md">日本語</a> |
+  <a href="README.zh-CN.md">Simplified Chinese</a> |
+  <a href="README.ja.md">Japanese</a> |
   <a href="docs/CHANGELOG.md">Changelog</a>
 </p>
 
@@ -14,7 +14,9 @@
   <a href="https://github.com/lonr-6/cc-desktop-switch/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/lonr-6/cc-desktop-switch/total?label=downloads"></a>
 </p>
 
-CC Desktop Switch is a lightweight desktop app for the official Claude Desktop client. It lets you manage third-party Anthropic-compatible API providers such as DeepSeek, Kimi, Zhipu GLM, Alibaba Cloud Bailian, and Xiaomi MiMo, then apply the right Claude Desktop 3P configuration with one click.
+CC Desktop Switch is a lightweight desktop app for the official Claude Desktop client. It lets you manage third-party Anthropic-compatible API providers such as DeepSeek, Kimi, Zhipu GLM, Alibaba Cloud Bailian, and Xiaomi MiMo, plus OpenAI-compatible providers such as OpenAI, Groq, Mistral AI, Sarvam AI, and OpenRouter, then apply the right Claude Desktop 3P configuration with one click.
+
+The interface ships in English and Simplified Chinese. English is the default on first launch regardless of the operating system locale; the language you pick is stored locally and reused on the next start.
 
 This project is focused on Claude Desktop on Windows and macOS. It is different from CLI-oriented tools such as `farion1231/cc-switch`: the goal here is to give regular desktop users a simple UI for provider setup, model mapping, health checks, and local gateway compatibility.
 
@@ -49,9 +51,20 @@ Since v1.0.18, Claude Desktop is configured to call the local CC Desktop Switch 
   </tr>
 </table>
 
+## Built-in Provider Presets
+
+Every preset fills in the recommended API base URL, auth scheme, API format, and model mapping. You still supply your own API key.
+
+| Group | Presets |
+| --- | --- |
+| Anthropic-compatible | DeepSeek, Custom Third-Party, Kimi (Moonshot), Kimi Code, Xiaomi MiMo (Pay for Token), Xiaomi MiMo (Token Plan), Zhipu GLM, Alibaba Cloud Bailian, Alibaba Cloud Bailian (Token Plan) |
+| OpenAI-compatible | OpenAI, Groq, Mistral AI, Sarvam AI, OpenRouter, Google Gemini, xAI (Grok), Together AI, Fireworks AI, Cerebras, Perplexity, Cohere |
+| Local | Ollama (local OpenAI-compatible server) |
+
 ## What It Does
 
 - Manages DeepSeek, Kimi, Zhipu GLM, Alibaba Cloud Bailian, Xiaomi MiMo, and custom third-party providers.
+- Ships ready-to-use presets for OpenAI, Groq, Mistral AI, Sarvam AI, OpenRouter, Google Gemini, xAI, Together AI, Fireworks AI, Cerebras, Perplexity, Cohere, and local Ollama.
 - Applies Claude Desktop third-party inference settings on Windows and macOS.
 - Uses a local gateway to keep model mapping, protocol compatibility, extra headers, and upstream keys under local control.
 - Shows only explicitly mapped Claude-safe model routes in Claude Desktop.
@@ -126,7 +139,10 @@ python -m unittest discover -s tests -v
 node --check frontend/js/api.js
 node --check frontend/js/app.js
 node --check frontend/js/i18n.js
+python scripts/check_i18n.py
 ```
+
+`scripts/check_i18n.py` enforces the localization contract: identical English and Simplified Chinese key sets and no untranslated CJK text outside the two dictionary files (`frontend/js/i18n.js` and `backend/i18n.py`).
 
 ## Troubleshooting
 

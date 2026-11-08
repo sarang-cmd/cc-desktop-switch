@@ -1,0 +1,15 @@
+{
+  "id": "cerebras",
+  "name": "Cerebras",
+  "baseUrl": "https://api.cerebras.ai/v1",
+  "baseUrlHint": "Cerebras Wafer-Scale Engine ultra-low-latency OpenAI-compatible endpoint",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "llama-3.3-70b",
+    "haiku": "llama3.1-8b",
+    "opus": "qwen-3-32b",
+    "default": "llama-3.3-70b"
+  },
+  "isBuiltin": true
+}

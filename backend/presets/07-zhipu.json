@@ -1,6 +1,6 @@
 {
   "id": "zhipu",
-  "name": "智谱 GLM",
+  "name": "Zhipu GLM",
   "baseUrl": "https://open.bigmodel.cn/api/anthropic",
   "authScheme": "x-api-key",
   "apiFormat": "anthropic",

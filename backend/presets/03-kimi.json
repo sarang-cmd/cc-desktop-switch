@@ -1,6 +1,6 @@
 {
   "id": "kimi",
-  "name": "Kimi (月之暗面)",
+  "name": "Kimi (Moonshot)",
   "baseUrl": "https://api.moonshot.cn/anthropic",
   "authScheme": "bearer",
   "apiFormat": "anthropic",

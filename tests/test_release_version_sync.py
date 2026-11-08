@@ -23,7 +23,7 @@ class ReleaseVersionSyncTests(unittest.TestCase):
             "installer.nsi": f'!define PRODUCT_VERSION "{EXPECTED_VERSION}"',
             "scripts/New-Release.ps1": f'[string]$Version = "{EXPECTED_VERSION}"',
             "start.bat": f"CC Desktop Switch v{EXPECTED_VERSION}",
-            "build.bat": f"CC Desktop Switch v{EXPECTED_VERSION} - 构建工具",
+            "build.bat": f"CC Desktop Switch v{EXPECTED_VERSION} - Build Tool",
             "docs/CHANGELOG.md": f"## v{EXPECTED_VERSION}",
             f"docs/release-notes-v{EXPECTED_VERSION}.md": f"# CC Desktop Switch v{EXPECTED_VERSION}",
         }

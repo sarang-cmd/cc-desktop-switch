@@ -1,4 +1,4 @@
-"""模型别名和多 provider 路由工具。"""
+"""Model alias and multi-provider routing utilities."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ def is_safe_custom_route_id(route_id: str) -> bool:
 
 
 def normalize_model_mappings(models: Optional[dict]) -> dict:
-    """把旧四槽位和新多槽位统一成当前结构，保留安全的自定义 Claude route。"""
+    """Normalize legacy 4-slot and current multi-slot structures while preserving safe custom Claude routes."""
     normalized = empty_model_mappings()
     if not isinstance(models, dict):
         return normalized
@@ -105,7 +105,7 @@ def normalize_model_mappings(models: Optional[dict]) -> dict:
 
 
 def custom_model_mappings(models: Optional[dict]) -> dict[str, str]:
-    """返回安全的自定义 Claude route -> 上游模型映射。"""
+    """Return safe custom Claude route -> upstream model mappings."""
     normalized = normalize_model_mappings(models)
     return {
         key: value
@@ -115,7 +115,7 @@ def custom_model_mappings(models: Optional[dict]) -> dict[str, str]:
 
 
 def model_mappings_with_legacy_aliases(models: Optional[dict]) -> dict:
-    """在新槽位结构上补回旧四槽位别名，供兼容读取。"""
+    """Add legacy 4-slot aliases onto the normalized slot structure for backward-compatible reads."""
     normalized = normalize_model_mappings(models)
     compat = dict(normalized)
     compat["default"] = normalized.get("default", "")
@@ -138,7 +138,7 @@ def model_mappings_with_legacy_aliases(models: Optional[dict]) -> dict:
 
 
 def provider_model_ids(provider: Optional[dict]) -> list[str]:
-    """按稳定顺序返回 provider 暴露给 Claude 的真实模型 ID。"""
+    """Return the deduplicated upstream model IDs exposed by a provider in stable order."""
     if not provider:
         return []
     models = normalize_model_mappings(provider.get("models") or {})
@@ -155,19 +155,19 @@ def provider_model_ids(provider: Optional[dict]) -> list[str]:
 
 
 def provider_slug(provider: dict) -> str:
-    """生成用于 Claude 模型菜单的稳定 provider 前缀。"""
+    """Generate a stable provider slug prefix for the Claude model menu."""
     source = str(provider.get("id") or provider.get("name") or "provider").lower()
     slug = re.sub(r"[^a-z0-9_-]+", "-", source).strip("-_")
     return slug[:56] or "provider"
 
 
 def model_alias(provider: dict, model_id: str) -> str:
-    """把 provider 和真实模型 ID 组合成菜单别名。"""
+    """Combine a provider slug and model ID into a menu alias."""
     return f"{provider_slug(provider)}/{model_id}"
 
 
 def model_supports_1m(provider: dict, model_id: str) -> bool:
-    """判断模型是否应声明 supports1m。"""
+    """Return True if the model should declare supports1m."""
     capabilities = provider.get("modelCapabilities") or {}
     if not isinstance(capabilities, dict):
         capabilities = {}
@@ -179,7 +179,7 @@ def model_supports_1m(provider: dict, model_id: str) -> bool:
 
 
 def desktop_model_entries(provider: Optional[dict], use_alias: bool = False) -> list[dict]:
-    """生成 Claude Desktop / gateway 可见的显式安全路由模型条目。"""
+    """Generate explicit safe-route model entries visible to Claude Desktop and the gateway."""
     if not provider:
         return []
     raw_models = provider.get("models") or {}
@@ -223,7 +223,7 @@ def desktop_model_entries(provider: Optional[dict], use_alias: bool = False) -> 
 
 
 def provider_model_entries(provider: Optional[dict], use_alias: bool = False) -> list[dict]:
-    """生成真实上游模型条目；不要直接用于 Claude Desktop 暴露面。"""
+    """Generate raw upstream model entries; do not expose directly to Claude Desktop."""
     if not provider:
         return []
     entries: list[dict] = []
@@ -243,7 +243,7 @@ def provider_model_entries(provider: Optional[dict], use_alias: bool = False) ->
 
 
 def all_provider_model_entries(providers: list[dict]) -> list[dict]:
-    """生成所有 provider 的去重安全路由模型条目。"""
+    """Generate deduplicated safe-route model entries across all providers."""
     entries: list[dict] = []
     seen: set[str] = set()
     for provider in providers:
@@ -259,7 +259,7 @@ def all_provider_model_entries(providers: list[dict]) -> list[dict]:
 
 
 def resolve_model_alias(providers: list[dict], requested_model: str) -> tuple[Optional[dict], str, bool]:
-    """把 provider/model 别名解析为具体 provider 和真实模型 ID。"""
+    """Resolve a provider/model alias into the target provider and upstream model ID."""
     requested = str(requested_model or "")
     if "/" not in requested:
         return None, requested, False
@@ -273,13 +273,13 @@ def resolve_model_alias(providers: list[dict], requested_model: str) -> tuple[Op
                     return provider, model_id, True
             if model_id in provider_model_ids(provider):
                 return provider, model_id, True
-            # 允许用户手动写入未出现在映射里的模型 ID。
+            # Allow manually specified model IDs even if not listed in mappings.
             return provider, model_id, True
     return None, requested, False
 
 
 def resolve_requested_model_slot(requested_model: str) -> Optional[str]:
-    """把 Claude 请求模型名解析为当前映射槽位。"""
+    """Resolve a requested Claude model name into the configured mapping slot key."""
     requested = str(requested_model or "").strip().lower()
     if not requested:
         return None
@@ -290,7 +290,7 @@ def resolve_requested_model_slot(requested_model: str) -> Optional[str]:
     if mapped:
         return mapped
 
-    # 兼容旧版本 Claude 模型 ID 和未精确列出的家族命名。
+    # Support legacy Claude model IDs and family names not explicitly listed.
     if "haiku" in requested:
         return "haiku"
     if "sonnet" in requested:
@@ -311,5 +311,5 @@ def resolve_requested_model_slot(requested_model: str) -> Optional[str]:
 
 
 def desktop_route_ids() -> tuple[str, ...]:
-    """返回 Claude Desktop 可见的安全 route ID 集合。"""
+    """Return the set of safe route IDs visible to Claude Desktop."""
     return DESKTOP_ROUTE_IDS

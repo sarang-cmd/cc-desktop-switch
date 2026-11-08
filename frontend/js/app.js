@@ -7,7 +7,7 @@
     { key: "opus", title: "Opus", icon: "bi-box", source: "claude-opus-4-7" },
   ];
   const providerFormModelSlots = [
-    { key: "default", label: "Default", icon: "bi-circle-fill", iconClass: "default", source: "仅作为内部后备，不显示在 Claude Desktop 菜单", required: true },
+    { key: "default", label: "Default", icon: "bi-circle-fill", iconClass: "default", source: "", required: true },
     { key: "opus_4_7", label: "Opus 4.7", icon: "bi-box", iconClass: "opus", source: "claude-opus-4-7" },
     { key: "opus_4_6", label: "Opus 4.6", icon: "bi-box", iconClass: "opus", source: "claude-opus-4-6" },
     { key: "opus_3", label: "Opus 3", icon: "bi-box", iconClass: "opus", source: "claude-3-opus" },
@@ -71,7 +71,7 @@
     wrap.innerHTML = `
       <div class="alert ${alertClass} mapping-check-alert alert-dismissible fade show" role="alert">
         <i class="bi ${iconClass}"></i>
-        <strong>${escapeHtml(model)}</strong> ${escapeHtml(title)}：${escapeHtml(message)}
+        <strong>${escapeHtml(model)}</strong> ${escapeHtml(title)}: ${escapeHtml(message)}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
     `;
@@ -175,12 +175,42 @@
     return String(value || "").trim().toLowerCase().replace(/\/+$/, "");
   }
 
+  function localizedOr(key, fallback) {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  }
+
+  function presetLabel(preset) {
+    const id = String(preset?.id || "").trim();
+    if (!id) return preset?.name || "";
+    return localizedOr(`preset.${id}.name`, preset?.name || "");
+  }
+
+  function clusterLabelKey(label) {
+    const normalized = normalizePresetKey(label);
+    if (normalized === "china cluster") return "preset.cluster.cn";
+    if (normalized === "singapore cluster") return "preset.cluster.sgp";
+    if (normalized === "europe cluster") return "preset.cluster.eu";
+    return "";
+  }
+
+  function presetBaseUrlHint(preset) {
+    const id = String(preset?.id || "").trim();
+    const fallback = String(preset?.baseUrlHint || "").trim();
+    if (!id) return fallback;
+    return localizedOr(`preset.${id}.baseUrlHint`, fallback);
+  }
+
   function presetExists(preset, providers) {
-    const presetName = normalizePresetKey(preset.name);
+    const names = new Set([
+      normalizePresetKey(preset.name),
+      normalizePresetKey(presetLabel(preset)),
+      normalizePresetKey(preset.id),
+    ].filter(Boolean));
     const presetUrl = normalizePresetKey(preset.baseUrl);
     return providers.some((provider) => (
-      normalizePresetKey(provider.name) === presetName
-      || normalizePresetKey(provider.baseUrl) === presetUrl
+      names.has(normalizePresetKey(provider.name))
+      || (presetUrl && normalizePresetKey(provider.baseUrl) === presetUrl)
     ));
   }
 
@@ -209,8 +239,8 @@
     if (!Array.isArray(items) || !items.length) return "";
     const shown = items.slice(0, maxItems).map((item) => String(item || "").trim()).filter(Boolean);
     if (!shown.length) return "";
-    const suffix = items.length > maxItems ? ` 等 ${items.length} 项` : "";
-    return `${shown.join("、")}${suffix}`;
+    const suffix = items.length > maxItems ? formatI18n("health.listMore", { count: items.length }) : "";
+    return `${shown.join(t("health.listSeparator"))}${suffix}`;
   }
 
   function healthIssueMessage(issue, health = {}) {
@@ -222,13 +252,16 @@
       const expected = health.expectedBaseUrl || "";
       const actual = health.actualBaseUrl || "";
       if (expected || actual) {
-        message += ` 当前: ${actual || "未读取到"}；期望: ${expected || "未读取到"}`;
+        message += formatI18n("health.currentExpected", {
+          actual: actual || t("health.notRead"),
+          expected: expected || t("health.notRead"),
+        });
       }
     } else if (issue.code === "one_million_not_written") {
-      if (models) message += ` 期望 1M: ${models}`;
-      if (writtenModels) message += `；已读回 1M: ${writtenModels}`;
+      if (models) message += formatI18n("health.expected1m", { models });
+      if (writtenModels) message += formatI18n("health.written1m", { models: writtenModels });
     } else if (models) {
-      message += ` 模型: ${models}`;
+      message += formatI18n("health.modelsSuffix", { models });
     }
     return message;
   }
@@ -243,7 +276,7 @@
   function displayConfigValue(value) {
     if (Array.isArray(value)) return JSON.stringify(value);
     const text = String(value ?? "").trim();
-    return text || "未读取到";
+    return text || t("health.notRead");
   }
 
   function renderDesktopHealthWarning(selector, health) {
@@ -513,7 +546,7 @@
     const hint = $("#providerBaseUrlHint");
     if (!input || !trigger || !menu || !wrap || !hint) return;
     const options = presetBaseUrlOptions(preset);
-    const helpText = String(preset?.baseUrlHint || "").trim();
+    const helpText = presetBaseUrlHint(preset);
     trigger.hidden = !options.length;
     trigger.disabled = !options.length;
     trigger.setAttribute("aria-expanded", options.length && baseUrlMenuOpen ? "true" : "false");
@@ -530,7 +563,7 @@
           aria-selected="${selected ? "true" : "false"}"
         >
           <span>${escapeHtml(option.value)}</span>
-          <small>${escapeHtml(option.label || "")}</small>
+          <small>${escapeHtml(localizedOr(clusterLabelKey(option.label), option.label || ""))}</small>
           ${selected ? '<i class="bi bi-check2"></i>' : ""}
         </button>
       `;
@@ -636,6 +669,16 @@
     `;
   }
 
+  function syncPatchboardRow(input) {
+    const row = input && input.closest(".patchboard-row");
+    if (!row) return;
+    const patched = !!input.value.trim();
+    row.classList.toggle("is-patched", patched);
+    row.classList.toggle("is-open", !patched);
+    const state = row.querySelector("[data-patch-state]");
+    if (state) state.textContent = t(patched ? "patchboard.patched" : "patchboard.unpatched");
+  }
+
   function formMappingMarkup() {
     const slotRows = providerFormRows.map((rowKey, index) => {
       const slot = slotByKey(rowKey);
@@ -643,15 +686,22 @@
       const currentProviderModel = providerFormMappings[rowKey] || "";
       const canCheck = !!currentProviderModel && !!editingProviderId;
       return `
-        <article class="form-mapping-row">
-          <div class="form-mapping-left">
+        <article class="form-mapping-row patchboard-row ${currentProviderModel ? "is-patched" : "is-open"}">
+          <div class="form-mapping-left patch-source">
+            <span class="patch-node-label" aria-hidden="true">${escapeHtml(t("providersAdd.patchboardSourceHeader"))}</span>
             <label class="form-label visually-hidden" for="providerMappingSlot-${index}">${t("providersAdd.claudeModel")}</label>
             <div class="mapping-select-wrap">
               <span class="mapping-icon ${slot.iconClass}"><i class="bi ${slot.icon}"></i></span>
               ${slotMenuMarkup(rowKey, index)}
             </div>
           </div>
-          <div class="form-mapping-right">
+          <div class="patch-wire">
+            <span class="patch-wire-label">${escapeHtml(t("providersAdd.patchboardWireLabel"))}</span>
+            <span class="patch-wire-state" data-patch-state>${escapeHtml(t(currentProviderModel ? "patchboard.patched" : "patchboard.unpatched"))}</span>
+            <span class="patch-wire-line" aria-hidden="true"></span>
+          </div>
+          <div class="form-mapping-right patch-target">
+            <span class="patch-node-label" aria-hidden="true">${escapeHtml(t("providersAdd.patchboardTargetHeader"))}</span>
             <label class="form-label visually-hidden" for="providerMappingValue-${index}">${t("providersAdd.providerModel")}</label>
             <div class="provider-model-input-wrap ${openProviderModelMenuKey === rowKey ? "open" : ""}">
               <input
@@ -707,8 +757,9 @@
             const currentProviderModel = mapping.model || "";
             const canCheck = !!currentProviderModel && !!editingProviderId;
             return `
-              <article class="form-mapping-row">
-                <div class="form-mapping-left">
+              <article class="form-mapping-row patchboard-row ${currentProviderModel ? "is-patched" : "is-open"}">
+                <div class="form-mapping-left patch-source">
+                  <span class="patch-node-label" aria-hidden="true">${escapeHtml(t("providersAdd.patchboardSourceHeader"))}</span>
                   <label class="form-label visually-hidden" for="providerCustomRoute-${index}">${t("providersAdd.customClaudeModel")}</label>
                   <div class="mapping-select-wrap">
                     <span class="mapping-icon custom"><i class="bi bi-plus-circle"></i></span>
@@ -722,7 +773,13 @@
                     >
                   </div>
                 </div>
-                <div class="form-mapping-right">
+                <div class="patch-wire">
+                  <span class="patch-wire-label">${escapeHtml(t("providersAdd.patchboardWireLabel"))}</span>
+                  <span class="patch-wire-state" data-patch-state>${escapeHtml(t(currentProviderModel ? "patchboard.patched" : "patchboard.unpatched"))}</span>
+                  <span class="patch-wire-line" aria-hidden="true"></span>
+                </div>
+                <div class="form-mapping-right patch-target">
+                  <span class="patch-node-label" aria-hidden="true">${escapeHtml(t("providersAdd.patchboardTargetHeader"))}</span>
                   <label class="form-label visually-hidden" for="providerCustomValue-${index}">${t("providersAdd.providerModel")}</label>
                   <div class="provider-model-input-wrap ${openProviderModelMenuKey === rowKey ? "open" : ""}">
                     <input
@@ -955,8 +1012,8 @@
       <label class="preset-option-item">
         <input class="form-check-input" type="checkbox" data-preset-model-option="${escapeHtml(id)}" ${optionEnabled(option, currentMappings) ? "checked" : ""}>
         <span>
-          <strong>${escapeHtml(option.label || id)}</strong>
-          <small>${escapeHtml(option.description || "")}</small>
+          <strong>${escapeHtml(localizedOr(`preset.option.${id}.label`, option.label || id))}</strong>
+          <small>${escapeHtml(localizedOr(`preset.option.${id}.description`, option.description || ""))}</small>
         </span>
       </label>
     `).join("");
@@ -1077,7 +1134,7 @@
       <button class="provider-switch-card preset-card ${added ? "added" : ""}" type="button" data-action="new-from-preset" data-preset="${presetId}" ${added ? "disabled" : ""}>
         <span class="drag-handle preset-plus"><i class="bi ${added ? "bi-check2" : "bi-plus-lg"}"></i></span>
         <span class="provider-logo">${iconMarkup(preset)}</span>
-        <span class="provider-main"><strong>${escapeHtml(preset.name)}</strong><span class="truncate">${escapeHtml(preset.baseUrl)}</span></span>
+        <span class="provider-main"><strong>${escapeHtml(presetLabel(preset))}</strong><span class="truncate">${escapeHtml(preset.baseUrl)}</span></span>
         <span class="provider-meta">${escapeHtml(preset.apiFormat)}</span>
         <span class="provider-actions"><span class="compact-enable ghost"><i class="bi ${added ? "bi-check2" : "bi-plus-lg"}"></i><span>${added ? t("providers.added") : t("providers.add")}</span></span></span>
       </button>
@@ -1214,7 +1271,7 @@
       return `
       <button class="preset-item ${active ? "active" : ""}" type="button" data-preset="${escapeHtml(preset.id)}" aria-pressed="${active ? "true" : "false"}">
         <span class="preset-logo">${iconMarkup(preset)}</span>
-        <span><strong>${escapeHtml(preset.name)}</strong><span>${escapeHtml(preset.baseUrl)}</span></span>
+        <span><strong>${escapeHtml(presetLabel(preset))}</strong><span>${escapeHtml(preset.baseUrl)}</span></span>
         <i class="bi ${active ? "bi-check2" : "bi-chevron-right"}"></i>
       </button>
     `;
@@ -1279,7 +1336,7 @@
     if (!baseUrl || !apiKey) return;
 
     btn.disabled = true;
-    status.textContent = "探测中...";
+    status.textContent = t("providersAdd.detectingFormat");
     status.className = "detect-format-status";
 
     try {
@@ -1287,17 +1344,21 @@
       if (result.success) {
         const fmt = result.apiFormat === "openai_responses" ? "openai_chat" : result.apiFormat;
         setFormApiFormat(fmt);
-        const fmtLabel = fmt === "anthropic" ? "Anthropic 兼容" : fmt === "openai_chat" ? "OpenAI Chat" : "OpenAI Responses";
-        status.textContent = `已识别: ${fmtLabel}`;
+        const fmtLabel = fmt === "anthropic"
+          ? t("providersAdd.formatAnthropic")
+          : fmt === "openai_chat"
+            ? t("providersAdd.formatOpenAI")
+            : t("providersAdd.formatOpenAIResponses");
+        status.textContent = formatI18n("providersAdd.detectedFormat", { format: fmtLabel });
         status.className = "detect-format-status success";
         protocolDetected = true;
         updateApplyButtonState();
       } else {
-        status.textContent = result.message || "探测失败";
+        status.textContent = result.message || t("providersAdd.detectFailed");
         status.className = "detect-format-status error";
       }
     } catch (error) {
-      status.textContent = error.message || "探测失败";
+      status.textContent = error.message || t("providersAdd.detectFailed");
       status.className = "detect-format-status error";
     } finally {
       updateDetectFormatButton();
@@ -1328,7 +1389,7 @@
   }
 
   function applyPresetToForm(preset, notify = true) {
-    $("#providerName").value = preset.name;
+    $("#providerName").value = presetLabel(preset);
     $("#providerBaseUrl").value = preset.baseUrl;
     baseUrlMenuOpen = false;
     renderBaseUrlOptions(preset);
@@ -1342,11 +1403,11 @@
     setProviderMappings(preset.models || emptyMappings());
     renderPresetOptions(preset, preset.models || emptyMappings());
     updatePresetSelection();
-    // 内置预设已知协议，第三方需要探测
+    // Builtin presets already know their protocol; third-party endpoints need detection.
     protocolDetected = preset.id !== "third-party";
     updateDetectFormatButton();
     updateApplyButtonState();
-    if (notify) showToast(`${preset.name} ${t("toast.presetFilled")}`);
+    if (notify) showToast(`${presetLabel(preset)} ${t("toast.presetFilled")}`);
   }
 
   async function fillProviderForEdit(providerId) {
@@ -1599,9 +1660,22 @@
     return normalized;
   }
 
+  async function saveLanguagePreference(language) {
+    try {
+      await CCApi.saveSettings({ language });
+    } catch (error) {
+      console.warn("Failed to persist language preference", error);
+    }
+  }
+
+  function resolveInitialLanguage(settings = {}) {
+    return CCI18n.storedLanguage() || CCI18n.normalizeLanguage(settings.language) || "en";
+  }
+
   async function saveSettingsFromForm() {
     const settings = {
       theme: currentTheme,
+      language: CCI18n.language,
       proxyPort: Number($("#settingsProxyPort").value),
       adminPort: Number($("#settingsAdminPort").value),
       autoStart: $("#autoStart").checked,
@@ -1682,29 +1756,20 @@
     return formatI18n("settings.ccswitchFound", { supported, unsupported });
   }
 
-  function translateCcSwitchReason(reason = "") {
-    const normalized = String(reason || "").trim();
-    if (!normalized) return "";
-    if (normalized === "没有发现 API 地址，可能是官方登录或空配置。") {
-      return t("settings.ccswitchReason.noBaseUrl");
-    }
-    if (normalized === "这是 CC-Switch 本机代理地址，不能作为上游 API 导入。") {
-      return t("settings.ccswitchReason.localProxy");
-    }
-    if (normalized === "没有发现 API Key。") {
-      return t("settings.ccswitchReason.noApiKey");
-    }
-    if (normalized === "OpenAI Chat 格式本轮不自动导入，避免转换兼容风险。") {
-      return t("settings.ccswitchReason.openaiChat");
-    }
-    if (normalized === "OpenAI Responses 格式暂未适配，暂不自动导入。") {
-      return t("settings.ccswitchReason.openaiResponses");
-    }
-    const unsupportedMatch = normalized.match(/^(.+?) 格式暂不支持自动导入。$/);
-    if (unsupportedMatch) {
-      return formatI18n("settings.ccswitchReason.unsupportedFormat", { format: unsupportedMatch[1] });
-    }
-    return normalized;
+  const ccSwitchReasonKeys = {
+    missing_base_url: "settings.ccswitchReason.noBaseUrl",
+    local_proxy_url: "settings.ccswitchReason.localProxy",
+    missing_api_key: "settings.ccswitchReason.noApiKey",
+    openai_chat: "settings.ccswitchReason.openaiChat",
+    openai_responses: "settings.ccswitchReason.openaiResponses",
+  };
+
+  function translateCcSwitchReason(reason = "", reasonCode = "") {
+    const key = ccSwitchReasonKeys[String(reasonCode || "").trim()];
+    if (key) return t(key);
+    // The backend returns a stable reasonCode; fall back to the raw message when an
+    // older configuration snapshot or a third-party adapter supplies none.
+    return String(reason || "").trim();
   }
 
   function renderCcSwitchImportList(providers = ccSwitchCandidates, message = "") {
@@ -1720,7 +1785,7 @@
         const statusLabel = provider.supported ? t("settings.ccswitchSupported") : t("settings.ccswitchUnsupported");
         const statusIcon = provider.supported ? "bi-check2-circle" : "bi-slash-circle";
         const model = provider.models?.default || provider.models?.sonnet_4_6 || provider.models?.sonnet || "";
-        const translatedReason = translateCcSwitchReason(provider.reason);
+        const translatedReason = translateCcSwitchReason(provider.reason, provider.reasonCode);
         return `
           <article class="ccswitch-import-item ${provider.supported ? "supported" : "unsupported"}">
             <div>
@@ -2299,7 +2364,7 @@
         } catch (error) {
           setUpdateInstallPhase("idle");
           if (status) {
-            status.textContent = "下载失败，请重试";
+            status.textContent = t("settings.downloadFailedRetry");
             status.classList.remove("available");
           }
           throw error;
@@ -2383,7 +2448,11 @@
         closeAuthSchemeMenu();
       }
       const langButton = event.target.closest("[data-lang]");
-      if (langButton) CCI18n.apply(langButton.dataset.lang);
+      if (langButton) {
+        const nextLanguage = CCI18n.normalizeLanguage(langButton.dataset.lang) || "en";
+        CCI18n.apply(nextLanguage);
+        saveLanguagePreference(nextLanguage);
+      }
       const addLink = event.target.closest("a[href='#providers/add']");
       if (addLink) {
         editingProviderId = null;
@@ -2450,6 +2519,7 @@
       const mappingInput = event.target.closest("[data-provider-model-input]");
       if (mappingInput) {
         updateProviderModelInput(mappingInput.dataset.providerModelInput, mappingInput.value);
+        syncPatchboardRow(mappingInput);
       }
       const customRouteInput = event.target.closest("[data-custom-route-input]");
       if (customRouteInput) {
@@ -2458,6 +2528,7 @@
       const customModelInput = event.target.closest("[data-custom-model-input]");
       if (customModelInput) {
         updateProviderModelInput(`custom:${customModelInput.dataset.customModelInput}`, customModelInput.value);
+        syncPatchboardRow(customModelInput);
       }
     });
 
@@ -2530,7 +2601,11 @@
     toast = new bootstrap.Toast($("#appToast"), { delay: 2200 });
     bindEvents();
     const settings = await CCApi.getSettings();
-    CCI18n.apply(settings.language || "zh");
+    const initialLanguage = resolveInitialLanguage(settings);
+    CCI18n.apply(initialLanguage);
+    if (CCI18n.normalizeLanguage(settings.language) !== initialLanguage) {
+      saveLanguagePreference(initialLanguage);
+    }
     applyTheme(settings.theme || "default");
     if (!window.location.hash) window.location.hash = "dashboard";
     await renderRoute(routeFromHash());

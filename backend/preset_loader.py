@@ -1,4 +1,4 @@
-"""内置 provider 预设文件加载与 schema 校验。"""
+"""Builtin provider preset file loader and schema validation."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ import logging
 import re
 from pathlib import Path
 from typing import Any
+
+from backend import i18n
 
 
 logger = logging.getLogger(__name__)
@@ -115,16 +117,22 @@ def _load_preset_schema() -> dict[str, Any]:
     try:
         payload = _read_json(PRESET_SCHEMA_FILE)
     except (OSError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"内置 provider schema 加载失败: {PRESET_SCHEMA_FILE} ({exc})") from exc
+        raise RuntimeError(
+            i18n.get_text("preset.error.schema_load", "en", path=PRESET_SCHEMA_FILE, error=exc)
+        ) from exc
     if not isinstance(payload, dict):
-        raise RuntimeError(f"内置 provider schema 必须是 JSON 对象: {PRESET_SCHEMA_FILE}")
+        raise RuntimeError(
+            i18n.get_text("preset.error.schema_not_object", "en", path=PRESET_SCHEMA_FILE)
+        )
     return payload
 
 
 def load_builtin_presets() -> list[dict[str, Any]]:
-    """从 backend/presets 加载内置 provider 预设。"""
+    """Load builtin provider presets from backend/presets."""
     if not PRESETS_DIR.exists():
-        raise RuntimeError(f"内置 provider 预设目录不存在: {PRESETS_DIR}")
+        raise RuntimeError(
+            i18n.get_text("preset.error.dir_missing", "en", path=PRESETS_DIR)
+        )
 
     schema = _load_preset_schema()
     preset_files = sorted(
@@ -132,7 +140,9 @@ def load_builtin_presets() -> list[dict[str, Any]]:
         if path.name != PRESET_SCHEMA_FILE.name
     )
     if not preset_files:
-        raise RuntimeError(f"未找到任何内置 provider 预设数据文件: {PRESETS_DIR}")
+        raise RuntimeError(
+            i18n.get_text("preset.error.no_files", "en", path=PRESETS_DIR)
+        )
 
     presets: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
@@ -140,26 +150,28 @@ def load_builtin_presets() -> list[dict[str, Any]]:
         try:
             payload = _read_json(path)
         except (OSError, json.JSONDecodeError) as exc:
-            logger.warning("跳过内置 provider 预设 %s：读取失败：%s", path.name, exc)
+            logger.warning("Skipping builtin provider preset %s: read failed: %s", path.name, exc)
             continue
 
         if not isinstance(payload, dict):
-            logger.warning("跳过内置 provider 预设 %s：顶层必须是 JSON 对象", path.name)
+            logger.warning("Skipping builtin provider preset %s: top-level must be a JSON object", path.name)
             continue
 
         errors = _validate_schema(payload, schema)
         if errors:
-            logger.warning("跳过内置 provider 预设 %s：%s", path.name, "; ".join(errors[:5]))
+            logger.warning("Skipping builtin provider preset %s: %s", path.name, "; ".join(errors[:5]))
             continue
 
         preset_id = str(payload.get("id") or "").strip()
         if preset_id in seen_ids:
-            logger.warning("跳过内置 provider 预设 %s：重复的 id %s", path.name, preset_id)
+            logger.warning("Skipping builtin provider preset %s: duplicate id %s", path.name, preset_id)
             continue
         seen_ids.add(preset_id)
         presets.append(payload)
 
     if not presets:
-        raise RuntimeError(f"未加载到任何有效的内置 provider 预设: {PRESETS_DIR}")
+        raise RuntimeError(
+            i18n.get_text("preset.error.none_valid", "en", path=PRESETS_DIR)
+        )
 
     return presets

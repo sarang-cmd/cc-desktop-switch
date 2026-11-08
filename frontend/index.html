@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-bs-theme="light">
+<html lang="en" data-bs-theme="light">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,37 +7,40 @@
     <link href="vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link href="vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="icon" href="assets/app-icon.png">
+    <meta name="theme-color" content="#F4F0E8">
+    <link rel="preload" href="assets/fonts/archivo-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/ibm-plex-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link href="css/style.css" rel="stylesheet">
   </head>
   <body>
     <header class="app-header">
       <div class="header-actions-left">
-        <button class="btn btn-outline-primary btn-sm dashboard-import-button" type="button" data-action="open-ccswitch-import"><i class="bi bi-box-arrow-in-down"></i><span data-i18n="dashboard.importCcSwitch">导入 CC Switch 配置</span></button>
-        <button class="btn btn-outline-danger btn-sm dashboard-clear-button" type="button" data-action="clear-desktop"><i class="bi bi-trash"></i><span data-i18n="dashboard.clearDesktopConfig">清除桌面版配置</span></button>
+        <button class="btn btn-outline-primary btn-sm dashboard-import-button" type="button" data-action="open-ccswitch-import"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i><span data-i18n="dashboard.importCcSwitch">Import CC Switch Config</span></button>
+        <button class="btn btn-outline-danger btn-sm dashboard-clear-button" type="button" data-action="clear-desktop"><i class="bi bi-trash" aria-hidden="true"></i><span data-i18n="dashboard.clearDesktopConfig">Clear Desktop Config</span></button>
       </div>
-      <nav class="route-tabs" aria-label="Primary navigation">
-        <a href="#dashboard" class="route-tab" data-nav="dashboard" title="Providers"><i class="bi bi-speedometer2"></i><span data-i18n="nav.dashboard">仪表盘</span></a>
-        <a href="#providers" class="route-tab" data-nav="providers" title="Providers"><i class="bi bi-plug"></i><span data-i18n="nav.providers">提供商</span></a>
-        <a href="#proxy" class="route-tab" data-nav="proxy" title="Forwarding"><i class="bi bi-broadcast-pin"></i><span data-i18n="nav.proxy">转发</span></a>
-        <a href="#settings" class="route-tab" data-nav="settings" title="Settings"><i class="bi bi-gear"></i><span data-i18n="nav.settings">设置</span></a>
-        <a href="#guide" class="route-tab" data-nav="guide" title="Guide"><i class="bi bi-book"></i><span data-i18n="nav.guide">引导</span></a>
+      <nav class="route-tabs" aria-label="Primary navigation" data-i18n-aria-label="header.primaryNav">
+        <a href="#dashboard" class="route-tab" data-nav="dashboard" title="Dashboard" data-i18n-title="nav.dashboard"><i class="bi bi-speedometer2" aria-hidden="true"></i><span data-i18n="nav.dashboard">Dashboard</span></a>
+        <a href="#providers" class="route-tab" data-nav="providers" title="Providers" data-i18n-title="nav.providers"><i class="bi bi-plug" aria-hidden="true"></i><span data-i18n="nav.providers">Providers</span></a>
+        <a href="#proxy" class="route-tab" data-nav="proxy" title="Forwarding" data-i18n-title="nav.proxy"><i class="bi bi-broadcast-pin" aria-hidden="true"></i><span data-i18n="nav.proxy">Forwarding</span></a>
+        <a href="#settings" class="route-tab" data-nav="settings" title="Settings" data-i18n-title="nav.settings"><i class="bi bi-gear" aria-hidden="true"></i><span data-i18n="nav.settings">Settings</span></a>
+        <a href="#guide" class="route-tab" data-nav="guide" title="Guide" data-i18n-title="nav.guide"><i class="bi bi-book" aria-hidden="true"></i><span data-i18n="nav.guide">Guide</span></a>
       </nav>
       <div class="header-actions">
-        <button class="update-badge" id="dashboardUpdateBadge" type="button" data-action="install-update" hidden><i class="bi bi-cloud-arrow-down"></i><span data-i18n="dashboard.updateAvailable">有新版本</span></button>
-        <div class="lang-switch" aria-label="language switch">
-          <button class="text-button active" type="button" data-lang="zh">中</button>
+        <button class="update-badge" id="dashboardUpdateBadge" type="button" data-action="install-update" hidden><i class="bi bi-cloud-arrow-down" aria-hidden="true"></i><span data-i18n="dashboard.updateAvailable">Update available</span></button>
+        <div class="lang-switch" aria-label="Language switch" data-i18n-aria-label="header.langSwitch">
+          <button class="text-button" type="button" data-lang="zh" data-i18n="lang.zhShort">ZH</button>
           <span>/</span>
-          <button class="text-button" type="button" data-lang="en">EN</button>
+          <button class="text-button active" type="button" data-lang="en">EN</button>
         </div>
         <span class="header-divider"></span>
-        <a class="theme-btn" href="#settings" aria-label="Settings">
-          <i class="bi bi-gear"></i>
+        <a class="theme-btn" href="#settings" aria-label="Settings" data-i18n-aria-label="header.settings">
+          <i class="bi bi-gear" aria-hidden="true"></i>
         </a>
-        <button class="theme-btn" type="button" data-theme-action="toggle" aria-label="Toggle theme">
-          <i class="bi bi-moon-stars-fill"></i>
+        <button class="theme-btn" type="button" data-theme-action="toggle" aria-label="Toggle theme" data-i18n-aria-label="header.toggleTheme">
+          <i class="bi bi-moon-stars-fill" aria-hidden="true"></i>
         </button>
-        <a class="round-add" href="#providers/add" aria-label="Add provider">
-          <i class="bi bi-plus-lg"></i>
+        <a class="round-add" href="#providers/add" aria-label="Add provider" data-i18n-aria-label="header.addProvider">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i>
         </a>
       </div>
     </header>
@@ -45,7 +48,7 @@
     <main class="app-main">
       <section class="page active" id="page-dashboard" data-page="dashboard">
         <div class="desktop-warning" id="dashboardDesktopWarning" hidden>
-          <i class="bi bi-exclamation-triangle"></i>
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
           <span></span>
         </div>
 
@@ -55,34 +58,34 @@
 
         <div class="status-grid">
           <article class="status-card">
-            <h2 data-i18n="dashboard.desktopStatus">桌面版状态</h2>
-            <div class="hero-status muted" id="dashboardDesktopIcon"><i class="bi bi-exclamation-lg"></i></div>
-            <strong class="muted-text" id="dashboardDesktopStatus" data-i18n="status.notConfigured">未配置</strong>
+            <h2 data-i18n="dashboard.desktopStatus">Desktop Status</h2>
+            <div class="hero-status muted" id="dashboardDesktopIcon"><i class="bi bi-exclamation-lg" aria-hidden="true"></i></div>
+            <strong class="muted-text" id="dashboardDesktopStatus" data-i18n="status.notConfigured">Not configured</strong>
           </article>
           <article class="status-card">
-            <h2 data-i18n="dashboard.proxyStatus">代理状态</h2>
-            <div class="hero-line-icon success"><i class="bi bi-hdd-network"></i><i class="bi bi-activity badge-icon"></i></div>
-            <strong id="dashboardProxyStatus">运行中 :18080</strong>
+            <h2 data-i18n="dashboard.proxyStatus">Forwarding Status</h2>
+            <div class="hero-line-icon success"><i class="bi bi-hdd-network" aria-hidden="true"></i><i class="bi bi-activity badge-icon" aria-hidden="true"></i></div>
+            <strong id="dashboardProxyStatus">Running :18080</strong>
           </article>
           <article class="status-card">
-            <h2 data-i18n="dashboard.activeProvider">当前提供商</h2>
+            <h2 data-i18n="dashboard.activeProvider">Active Provider</h2>
             <span class="large-dot"></span>
             <strong id="dashboardProviderName">DeepSeek</strong>
           </article>
         </div>
         <div class="quick-actions">
-          <a href="#providers/add" class="btn btn-primary action-button"><i class="bi bi-magic"></i><span data-i18n="dashboard.configureDesktop">添加并应用</span></a>
-          <button class="btn btn-success action-button" type="button" data-action="proxy-start"><i class="bi bi-play-circle"></i><span data-i18n="proxy.start">启动转发</span></button>
-          <a href="#providers" class="btn btn-outline-primary action-button"><i class="bi bi-arrow-left-right"></i><span data-i18n="dashboard.switchProvider">切换提供商</span></a>
+          <a href="#providers/add" class="btn btn-primary action-button"><i class="bi bi-magic" aria-hidden="true"></i><span data-i18n="dashboard.configureDesktop">Add and Apply</span></a>
+          <button class="btn btn-success action-button" type="button" data-action="proxy-start"><i class="bi bi-play-circle" aria-hidden="true"></i><span data-i18n="proxy.start">Start</span></button>
+          <a href="#providers" class="btn btn-outline-primary action-button"><i class="bi bi-arrow-left-right" aria-hidden="true"></i><span data-i18n="dashboard.switchProvider">Switch Provider</span></a>
         </div>
 
         <article class="panel">
           <div class="panel-header">
             <div class="title-with-icon">
-              <span class="soft-icon"><i class="bi bi-file-earmark-text"></i></span>
-              <h2 data-i18n="dashboard.recentActivity">最近操作</h2>
+              <span class="soft-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+              <h2 data-i18n="dashboard.recentActivity">Recent Activity</h2>
             </div>
-            <button class="btn btn-outline-primary btn-sm" type="button" data-action="view-logs"><span data-i18n="common.viewAll">查看全部</span><i class="bi bi-chevron-right"></i></button>
+            <button class="btn btn-outline-primary btn-sm" type="button" data-action="view-logs"><span data-i18n="common.viewAll">View All</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
           </div>
           <div class="activity-list" id="activityList"></div>
         </article>
@@ -90,21 +93,21 @@
 
       <section class="page" id="page-providers-add" data-page="providers/add">
         <div class="page-title">
-          <h1 data-i18n="providersAdd.title">添加提供商</h1>
-          <p data-i18n="providersAdd.subtitle">添加新的 API 提供商或选择预设</p>
+          <h1 data-i18n="providersAdd.title">Add Provider</h1>
+          <p data-i18n="providersAdd.subtitle">Add a new API provider or choose a preset</p>
         </div>
 
         <div class="two-column provider-add-layout">
           <article class="panel form-panel">
             <form id="providerForm" autocomplete="off">
               <div class="mb-4">
-                <label class="form-label required" for="providerName" data-i18n="providers.name">提供商名称</label>
+                <label class="form-label required" for="providerName" data-i18n="providers.name">Provider Name</label>
                 <input class="form-control form-control-lg" id="providerName" name="name" value="My DeepSeek" autocomplete="organization" required>
               </div>
               <div class="mb-4">
                 <div class="label-line">
-                  <label class="form-label required" for="providerBaseUrl">API Base URL</label>
-                  <button class="link-action" type="button" data-action="test-provider-form"><i class="bi bi-lightning-charge"></i><span data-i18n="providers.manageAndTest">管理与测速</span></button>
+                  <label class="form-label required" for="providerBaseUrl" data-i18n="providers.baseUrl">API Base URL</label>
+                  <button class="link-action" type="button" data-action="test-provider-form"><i class="bi bi-lightning-charge" aria-hidden="true"></i><span data-i18n="providers.manageAndTest">Manage &amp; Test</span></button>
                 </div>
                 <div class="baseurl-input-wrap" id="providerBaseUrlControl">
                   <input class="form-control form-control-lg" id="providerBaseUrl" name="baseUrl" value="https://api.deepseek.com/anthropic" autocomplete="url" required>
@@ -117,73 +120,81 @@
                 <div class="speed-result" id="formSpeedResult"></div>
               </div>
               <div class="mb-4">
-                <label class="form-label required" for="providerApiKey">API Key</label>
+                <label class="form-label required" for="providerApiKey" data-i18n="providers.apiKey">API Key</label>
                 <div class="input-with-button">
-                  <input class="form-control form-control-lg" id="providerApiKey" name="apiKey" type="password" placeholder="sk-..." autocomplete="current-password" required>
-                  <button type="button" class="input-icon" data-action="toggle-key" aria-label="toggle api key"><i class="bi bi-eye"></i></button>
+                  <input class="form-control form-control-lg" id="providerApiKey" name="apiKey" type="password" placeholder="sk-..." data-i18n-placeholder="providers.keyPlaceholder" autocomplete="current-password" required>
+                  <button type="button" class="input-icon" data-action="toggle-key" aria-label="Toggle API key visibility" data-i18n-aria-label="providersAdd.toggleApiKey"><i class="bi bi-eye" aria-hidden="true"></i></button>
                 </div>
               </div>
               <div class="mb-4">
-                <label class="form-label required" for="providerAuth">Auth Scheme</label>
+                <label class="form-label required" for="providerAuth" data-i18n="providersAdd.authScheme">Auth Scheme</label>
                 <input id="providerAuth" name="authScheme" type="hidden" value="bearer">
                 <div class="auth-scheme-menu-wrap" id="providerAuthControl">
                   <button class="form-select form-select-lg auth-scheme-trigger" id="providerAuthTrigger" type="button" data-action="toggle-auth-scheme-menu" aria-haspopup="listbox" aria-expanded="false">
                     <span>bearer</span>
-                    <i class="bi bi-chevron-down"></i>
+                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
                   </button>
                   <div class="auth-scheme-menu" id="providerAuthMenu" role="listbox" aria-labelledby="providerAuthTrigger">
-                    <button class="auth-scheme-option selected" type="button" role="option" data-action="select-auth-scheme" data-value="bearer" aria-selected="true"><span>bearer</span><i class="bi bi-check2"></i></button>
+                    <button class="auth-scheme-option selected" type="button" role="option" data-action="select-auth-scheme" data-value="bearer" aria-selected="true"><span>bearer</span><i class="bi bi-check2" aria-hidden="true"></i></button>
                     <button class="auth-scheme-option" type="button" role="option" data-action="select-auth-scheme" data-value="x-api-key" aria-selected="false"><span>x-api-key</span></button>
                     <button class="auth-scheme-option" type="button" role="option" data-action="select-auth-scheme" data-value="none" aria-selected="false"><span>none</span></button>
                   </div>
                 </div>
               </div>
               <details class="advanced-provider-options" open>
-                <summary><i class="bi bi-sliders"></i><span data-i18n="providersAdd.compatTitle">高级：第三方兼容接口</span><i class="bi bi-chevron-down compat-chevron"></i></summary>
-                <p data-i18n="providersAdd.compatHint">默认使用 Anthropic 兼容接口。OpenAI Chat 属于实验适配，建议确认工具调用可用后再用于 Claude Code。</p>
+                <summary><i class="bi bi-sliders" aria-hidden="true"></i><span data-i18n="providersAdd.compatTitle">Advanced: third-party compatibility</span><i class="bi bi-chevron-down compat-chevron" aria-hidden="true"></i></summary>
+                <p data-i18n="providersAdd.compatHint">Anthropic-compatible APIs are the stable path. OpenAI Chat is experimental; verify tool calling before using it with Claude Code.</p>
                 <div class="format-choice" id="providerFormatChoice" role="group" aria-label="API format">
                   <button class="format-choice-button active" type="button" data-api-format="anthropic">
-                    <strong data-i18n="providersAdd.formatAnthropic">Anthropic 兼容</strong>
-                    <span data-i18n="providersAdd.formatAnthropicHint">推荐，稳定主流程</span>
+                    <strong data-i18n="providersAdd.formatAnthropic">Anthropic Compatible</strong>
+                    <span data-i18n="providersAdd.formatAnthropicHint">Recommended stable path</span>
                   </button>
                   <button class="format-choice-button" type="button" data-api-format="openai_chat">
-                    <strong data-i18n="providersAdd.formatOpenAI">OpenAI Chat 实验</strong>
-                    <span data-i18n="providersAdd.formatOpenAIHint">用于 new-api / CPA / OpenCode Go 等兼容端点</span>
+                    <strong data-i18n="providersAdd.formatOpenAI">OpenAI Chat Experimental</strong>
+                    <span data-i18n="providersAdd.formatOpenAIHint">For OpenAI / Groq / Mistral / new-api / CPA compatible endpoints</span>
                   </button>
                 </div>
                 <div class="detect-format-row">
-                  <button class="btn btn-sm btn-outline-primary" id="detectFormatBtn" type="button" data-action="detect-format" disabled><i class="bi bi-search"></i><span>识别协议类型</span></button>
+                  <button class="btn btn-sm btn-outline-primary" id="detectFormatBtn" type="button" data-action="detect-format" disabled><i class="bi bi-search" aria-hidden="true"></i><span data-i18n="providersAdd.detectFormat">Detect Protocol Format</span></button>
                   <span class="detect-format-status" id="detectFormatStatus"></span>
                 </div>
               </details>
-              <section class="provider-mapping-section">
-                <div class="section-title-row">
-                  <div>
-                    <h2 data-i18n="providersAdd.mappingTitle">模型映射</h2>
-                    <p data-i18n="providersAdd.mappingSubtitle">把 Claude 的 Sonnet / Haiku / Opus 映射到这个供应商真实支持的模型。</p>
+              <section class="provider-mapping-section routing-patchboard" aria-labelledby="patchboardTitle">
+                <div class="patchboard-head">
+                  <div class="patchboard-title-block">
+                    <span class="patchboard-badge" data-i18n="patchboard.badge">PATCHBOARD</span>
+                    <div>
+                      <h2 id="patchboardTitle" data-i18n="providersAdd.mappingTitle">Model Mapping</h2>
+                      <p data-i18n="providersAdd.mappingSubtitle">Choose the Claude model on the left and map it to the real upstream model on the right. Only explicitly mapped Claude models appear in Claude Desktop; Default is not a menu item.</p>
+                    </div>
                   </div>
-                  <button class="provider-mapping-fetch" type="button" data-action="fetch-form-models"><i class="bi bi-cloud-arrow-down"></i><span data-i18n="models.fetch">获取模型</span></button>
+                  <button class="provider-mapping-fetch" type="button" data-action="fetch-form-models"><i class="bi bi-cloud-arrow-down" aria-hidden="true"></i><span data-i18n="models.fetch">Fetch Models</span></button>
+                </div>
+                <div class="patchboard-rail" aria-hidden="true">
+                  <span class="patchboard-rail-side" data-i18n="patchboard.railClaude">CLAUDE SIDE</span>
+                  <span class="patchboard-rail-track"></span>
+                  <span class="patchboard-rail-side" data-i18n="patchboard.railUpstream">UPSTREAM SIDE</span>
                 </div>
                 <div class="mapping-check-alert-wrap" id="mappingCheckAlertWrap"></div>
                 <div class="form-mapping-grid" id="providerMappingStack"></div>
                 <div class="preset-options" id="providerPresetOptions" hidden></div>
                 <p class="inline-status" id="providerModelFetchResult"></p>
                 <div class="apply-explain">
-                  <i class="bi bi-info-circle"></i>
-                  <p data-i18n="providersAdd.applyHint">一键应用会保存供应商和模型映射，把它设为默认，并让 Claude 桌面版连接到本工具。之后你在 Claude 桌面版里发消息，本工具会自动转发到你填写的 API 地址。</p>
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                  <p data-i18n="providersAdd.applyHint">Apply saves the provider and model mapping, makes it the default, and connects Claude Desktop to this app. Messages from Claude Desktop will then be forwarded to your API URL.</p>
                 </div>
               </section>
               <div class="button-row provider-form-actions">
-                <button class="btn btn-primary btn-lg" type="button" data-action="apply-provider-desktop"><i class="bi bi-magic"></i><span data-i18n="providersAdd.applyToDesktop">一键应用到 Claude 桌面版</span></button>
-                <button class="btn btn-outline-primary btn-lg" id="providerSaveOnly" type="submit" data-i18n="common.saveOnly">仅保存</button>
-                <a class="btn btn-outline-primary btn-lg" href="#providers" data-i18n="common.cancel">取消</a>
+                <button class="btn btn-primary btn-lg" type="button" data-action="apply-provider-desktop"><i class="bi bi-magic" aria-hidden="true"></i><span data-i18n="providersAdd.applyToDesktop">Apply to Claude Desktop</span></button>
+                <button class="btn btn-outline-primary btn-lg" id="providerSaveOnly" type="submit" data-i18n="common.saveOnly">Save Only</button>
+                <a class="btn btn-outline-primary btn-lg" href="#providers" data-i18n="common.cancel">Cancel</a>
               </div>
             </form>
           </article>
 
           <article class="panel preset-panel">
-            <h2 data-i18n="providersAdd.presets">快捷预设</h2>
-            <p class="preset-help" data-i18n="providersAdd.presetsHint">选择后会自动填入 API 地址和推荐模型，API Key 仍由你自己填写。</p>
+            <h2 data-i18n="providersAdd.presets">Quick Presets</h2>
+            <p class="preset-help" data-i18n="providersAdd.presetsHint">Choosing one fills the API URL and suggested models. You still enter your own API key.</p>
             <div id="presetList" class="preset-list"></div>
           </article>
         </div>
@@ -192,30 +203,30 @@
       <section class="page" id="page-providers" data-page="providers">
         <div class="page-title with-action">
           <div>
-            <h1 data-i18n="providers.title">提供商</h1>
-            <p data-i18n="providers.subtitle">管理已配置的 API 提供商</p>
+            <h1 data-i18n="providers.title">Providers</h1>
+            <p data-i18n="providers.subtitle">Manage configured API providers</p>
           </div>
-          <a href="#providers/add" class="btn btn-primary btn-lg"><i class="bi bi-plus-lg"></i><span data-i18n="providers.add">添加提供商</span></a>
+          <a href="#providers/add" class="btn btn-primary btn-lg"><i class="bi bi-plus-lg" aria-hidden="true"></i><span data-i18n="providers.add">Add Provider</span></a>
         </div>
 
         <article class="panel model-menu-mode-panel" hidden aria-hidden="true">
           <div>
-            <h2 data-i18n="providers.modelMenuTitle">Claude 模型菜单</h2>
-            <p id="modelMenuModeHint" data-i18n="providers.modelMenuSingleHint">当前只把默认提供商的模型显示到 Claude 桌面版。</p>
+            <h2 data-i18n="providers.modelMenuTitle">Claude Model Menu</h2>
+            <p id="modelMenuModeHint" data-i18n="providers.modelMenuSingleHint">Only the default provider is shown in Claude Desktop. Re-apply and restart Claude Desktop after adding or renaming models.</p>
           </div>
           <button class="btn btn-outline-primary btn-sm" id="modelMenuModeToggle" type="button" data-action="toggle-model-menu-mode">
-            <i class="bi bi-list-stars"></i><span data-i18n="providers.showAllModels">显示全部模型</span>
+            <i class="bi bi-list-stars" aria-hidden="true"></i><span data-i18n="providers.showAllModels">Show All Models</span>
           </button>
         </article>
 
         <article class="panel table-panel">
           <div class="provider-table-header">
             <span></span>
-            <span data-i18n="providers.name">提供商名称</span>
+            <span data-i18n="providers.name">Provider Name</span>
             <span data-i18n="providers.baseUrl">API Base URL</span>
-            <span data-i18n="providers.mapping">模型映射</span>
-            <span data-i18n="providers.status">状态</span>
-            <span data-i18n="providers.actions">操作</span>
+            <span data-i18n="providers.mapping">Model Mapping</span>
+            <span data-i18n="providers.status">Status</span>
+            <span data-i18n="providers.actions">Actions</span>
           </div>
           <div id="providerRows"></div>
         </article>
@@ -223,48 +234,48 @@
 
       <section class="page" id="page-desktop" data-page="desktop">
         <div class="page-title title-with-back">
-          <a class="square-button" href="#dashboard" aria-label="back"><i class="bi bi-arrow-left"></i></a>
+          <a class="square-button" href="#dashboard" aria-label="Back" data-i18n-aria-label="common.back"><i class="bi bi-arrow-left" aria-hidden="true"></i></a>
           <div>
-            <h1 data-i18n="desktop.title">Claude 桌面版</h1>
-            <p data-i18n="desktop.subtitle">一键让 Claude 桌面版使用当前供应商</p>
+            <h1 data-i18n="desktop.title">Claude Desktop</h1>
+            <p data-i18n="desktop.subtitle">Make Claude Desktop use the active provider</p>
           </div>
         </div>
 
         <div class="two-column desktop-layout">
           <div>
             <article class="panel desktop-card">
-              <h2 data-i18n="desktop.configTitle">Claude 桌面版配置</h2>
+              <h2 data-i18n="desktop.configTitle">Claude Desktop Configuration</h2>
               <div class="configured-row">
-                <span class="circle-check"><i class="bi bi-check-lg"></i></span>
-                <strong id="desktopConfiguredText" data-i18n="status.configured">已配置</strong>
+                <span class="circle-check"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
+                <strong id="desktopConfiguredText" data-i18n="status.configured">Configured</strong>
               </div>
               <div class="desktop-warning compact" id="desktopPageWarning" hidden>
-                <i class="bi bi-exclamation-triangle"></i>
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                 <span></span>
               </div>
               <div class="config-list" id="desktopConfigList"></div>
               <div class="apply-explain desktop-explain">
-                <i class="bi bi-diagram-3"></i>
-                <p data-i18n="desktop.explainText">原理很简单：Claude 桌面版先连接到本工具；本工具再把 Claude 的模型名翻译成你选择的供应商模型，并转发到对应 API。使用第三方 provider 时请保持本工具后台运行；你的上游 API Key 只保存在本机配置里，不直接写进 Claude 桌面版。</p>
+                <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                <p data-i18n="desktop.explainText">Claude Desktop connects to this app first. This app translates Claude model names to the selected provider models, then forwards requests to the API. Keep this app running in the background for third-party providers. Your upstream API key stays in local config and is not written directly into Claude Desktop.</p>
               </div>
-              <button class="btn btn-primary btn-lg w-100" type="button" data-action="apply-desktop"><i class="bi bi-download"></i><span data-i18n="desktop.apply">应用到 Claude 桌面版</span></button>
+              <button class="btn btn-primary btn-lg w-100" type="button" data-action="apply-desktop"><i class="bi bi-download" aria-hidden="true"></i><span data-i18n="desktop.apply">Apply to Claude Desktop</span></button>
             </article>
             <article class="panel details-panel">
               <div class="panel-header">
-                <h2 data-i18n="desktop.details">配置详情</h2>
-                <i class="bi bi-chevron-down"></i>
+                <h2 data-i18n="desktop.details">Configuration Details</h2>
+                <i class="bi bi-chevron-down" aria-hidden="true"></i>
               </div>
               <pre class="code-block" id="desktopJson"></pre>
             </article>
-            <button class="btn btn-outline-danger btn-lg w-100 danger-outline" type="button" data-action="clear-desktop"><i class="bi bi-trash"></i><span data-i18n="desktop.clear">清除配置</span></button>
+            <button class="btn btn-outline-danger btn-lg w-100 danger-outline" type="button" data-action="clear-desktop"><i class="bi bi-trash" aria-hidden="true"></i><span data-i18n="desktop.clear">Clear Configuration</span></button>
           </div>
 
           <article class="panel guide-panel">
-            <h2 data-i18n="desktop.quickGuide">快速引导</h2>
+            <h2 data-i18n="desktop.quickGuide">Quick Guide</h2>
             <div class="mini-steps">
-              <div class="mini-step"><span>1</span><i class="bi bi-cursor"></i><strong data-i18n="desktop.step1Title">点击应用</strong><p data-i18n="desktop.step1Text">把 Claude 桌面版连接到本工具</p></div>
-              <div class="mini-step"><span>2</span><i class="bi bi-arrow-clockwise"></i><strong data-i18n="desktop.step2Title">重启 Claude 桌面版</strong><p data-i18n="desktop.step2Text">关闭并重新打开 Claude 桌面版</p></div>
-              <div class="mini-step"><span>3</span><i class="bi bi-display"></i><strong data-i18n="desktop.step3Title">开始使用</strong><p data-i18n="desktop.step3Text">之后在 Claude 桌面版里正常提问即可</p></div>
+              <div class="mini-step"><span>1</span><i class="bi bi-cursor" aria-hidden="true"></i><strong data-i18n="desktop.step1Title">Click Apply</strong><p data-i18n="desktop.step1Text">Connect Claude Desktop to this app</p></div>
+              <div class="mini-step"><span>2</span><i class="bi bi-arrow-clockwise" aria-hidden="true"></i><strong data-i18n="desktop.step2Title">Restart Claude Desktop</strong><p data-i18n="desktop.step2Text">Close and reopen Claude Desktop</p></div>
+              <div class="mini-step"><span>3</span><i class="bi bi-display" aria-hidden="true"></i><strong data-i18n="desktop.step3Title">Start using it</strong><p data-i18n="desktop.step3Text">Ask questions in Claude Desktop as usual</p></div>
             </div>
           </article>
         </div>
@@ -272,32 +283,32 @@
 
       <section class="page" id="page-proxy" data-page="proxy">
         <div class="page-title">
-          <h1 data-i18n="proxy.title">转发状态</h1>
-          <p data-i18n="proxy.subtitle">查看本机转发服务状态和请求日志</p>
+          <h1 data-i18n="proxy.title">Forwarding Status</h1>
+          <p data-i18n="proxy.subtitle">View local forwarding status and request logs</p>
         </div>
 
         <article class="panel proxy-control">
           <div class="proxy-running">
             <span class="pulse-dot"></span>
             <div class="proxy-running-meta">
-              <strong id="proxyStateText">运行中</strong>
-              <p data-i18n="proxy.localhost">本机监听</p>
+              <strong id="proxyStateText">Running</strong>
+              <p data-i18n="proxy.localhost">Listening locally</p>
             </div>
           </div>
           <div class="port-control">
-            <label class="form-label" for="proxyPort" data-i18n="settings.proxyPort">转发端口</label>
+            <label class="form-label" for="proxyPort" data-i18n="settings.proxyPort">Forwarding Port</label>
             <input class="form-control form-control-lg" type="number" id="proxyPort" value="18080">
           </div>
-          <button class="btn btn-outline-secondary btn-lg" type="button" data-action="proxy-start"><i class="bi bi-play"></i><span data-i18n="proxy.start">启动转发</span></button>
-          <button class="btn btn-danger btn-lg" type="button" data-action="proxy-stop"><i class="bi bi-stop-fill"></i><span data-i18n="proxy.stop">停止转发</span></button>
+          <button class="btn btn-outline-secondary btn-lg" type="button" data-action="proxy-start"><i class="bi bi-play" aria-hidden="true"></i><span data-i18n="proxy.start">Start</span></button>
+          <button class="btn btn-danger btn-lg" type="button" data-action="proxy-stop"><i class="bi bi-stop-fill" aria-hidden="true"></i><span data-i18n="proxy.stop">Stop</span></button>
         </article>
 
         <article class="terminal-panel">
           <div class="terminal-toolbar">
-            <button class="btn btn-outline-light btn-sm" type="button" data-action="clear-logs"><i class="bi bi-trash"></i><span data-i18n="proxy.clearLog">清除日志</span></button>
-            <button class="btn btn-outline-light btn-sm" type="button" data-action="run-diagnostics"><i class="bi bi-activity"></i><span data-i18n="diagnostics.run">运行诊断</span></button>
-            <button class="btn btn-outline-light btn-sm" type="button" data-action="export-diagnostics"><i class="bi bi-shield-lock"></i><span data-i18n="diagnostics.export">导出诊断包</span></button>
-            <label class="switch-label"><span data-i18n="proxy.autoScroll">自动滚动</span><input type="checkbox" id="autoScroll" checked><span class="switch-ui"></span></label>
+            <button class="btn btn-outline-light btn-sm" type="button" data-action="clear-logs"><i class="bi bi-trash" aria-hidden="true"></i><span data-i18n="proxy.clearLog">Clear Log</span></button>
+            <button class="btn btn-outline-light btn-sm" type="button" data-action="run-diagnostics"><i class="bi bi-activity" aria-hidden="true"></i><span data-i18n="diagnostics.run">Run Diagnostics</span></button>
+            <button class="btn btn-outline-light btn-sm" type="button" data-action="export-diagnostics"><i class="bi bi-shield-lock" aria-hidden="true"></i><span data-i18n="diagnostics.export">Export Diagnostics</span></button>
+            <label class="switch-label"><span data-i18n="proxy.autoScroll">Auto-scroll</span><input type="checkbox" id="autoScroll" checked><span class="switch-ui"></span></label>
           </div>
           <div class="terminal-log" id="proxyLog"></div>
         </article>
@@ -307,125 +318,125 @@
 
       <section class="page" id="page-settings" data-page="settings">
         <div class="page-title">
-          <h1 data-i18n="settings.title">设置</h1>
-          <p data-i18n="settings.subtitle">全局偏好和应用信息</p>
+          <h1 data-i18n="settings.title">Settings</h1>
+          <p data-i18n="settings.subtitle">Global preferences and app information</p>
         </div>
 
         <article class="panel settings-panel">
           <div class="settings-row">
-            <strong data-i18n="settings.theme">主题</strong>
+            <strong data-i18n="settings.theme">Theme</strong>
             <div class="segmented theme-segment">
-              <button class="btn active theme-swatch theme-swatch-default" type="button" data-theme-action="default" aria-label="Default theme"></button>
-              <button class="btn theme-swatch theme-swatch-green" type="button" data-theme-action="green" aria-label="Green theme"></button>
-              <button class="btn theme-swatch theme-swatch-orange" type="button" data-theme-action="orange" aria-label="Orange theme"></button>
-              <button class="btn theme-swatch theme-swatch-gray" type="button" data-theme-action="gray" aria-label="Gray theme"></button>
-              <button class="btn theme-swatch theme-swatch-dark" type="button" data-theme-action="dark" aria-label="Dark theme"></button>
-              <button class="btn theme-swatch theme-swatch-white" type="button" data-theme-action="white" aria-label="White theme"></button>
+              <button class="btn active theme-swatch theme-swatch-default" type="button" data-theme-action="default" aria-label="Default theme" data-i18n-aria-label="theme.default"></button>
+              <button class="btn theme-swatch theme-swatch-green" type="button" data-theme-action="green" aria-label="Green theme" data-i18n-aria-label="theme.green"></button>
+              <button class="btn theme-swatch theme-swatch-orange" type="button" data-theme-action="orange" aria-label="Orange theme" data-i18n-aria-label="theme.orange"></button>
+              <button class="btn theme-swatch theme-swatch-gray" type="button" data-theme-action="gray" aria-label="Gray theme" data-i18n-aria-label="theme.gray"></button>
+              <button class="btn theme-swatch theme-swatch-dark" type="button" data-theme-action="dark" aria-label="Dark theme" data-i18n-aria-label="theme.dark"></button>
+              <button class="btn theme-swatch theme-swatch-white" type="button" data-theme-action="white" aria-label="White theme" data-i18n-aria-label="theme.white"></button>
             </div>
           </div>
           <div class="settings-row">
-            <strong data-i18n="settings.language">语言</strong>
+            <strong data-i18n="settings.language">Language</strong>
             <div class="segmented language-segment">
-              <button class="btn active" type="button" data-lang="zh">中文</button>
-              <button class="btn" type="button" data-lang="en">EN</button>
+              <button class="btn" type="button" data-lang="zh" data-i18n="lang.zhLabel">Chinese</button>
+              <button class="btn active" type="button" data-lang="en">EN</button>
             </div>
           </div>
           <div class="settings-row">
-            <strong data-i18n="settings.proxyPort">转发端口</strong>
+            <label for="settingsProxyPort"><strong data-i18n="settings.proxyPort">Forwarding Port</strong></label>
             <input class="form-control form-control-lg" type="number" id="settingsProxyPort" value="18080">
           </div>
           <div class="settings-row">
-            <strong data-i18n="settings.adminPort">管理端口</strong>
+            <label for="settingsAdminPort"><strong data-i18n="settings.adminPort">Admin Port</strong></label>
             <input class="form-control form-control-lg" type="number" id="settingsAdminPort" value="18081">
           </div>
           <div class="settings-row">
-            <strong data-i18n="settings.autoStart">开机自启</strong>
-            <label class="switch-label only-switch"><input type="checkbox" id="autoStart" checked><span class="switch-ui"></span></label>
+            <strong data-i18n="settings.autoStart">Auto-start on boot</strong>
+            <label class="switch-label only-switch"><input type="checkbox" id="autoStart" checked aria-label="Auto-start on boot" data-i18n-aria-label="settings.autoStart"><span class="switch-ui"></span></label>
           </div>
           <div class="settings-row" hidden aria-hidden="true">
-            <strong data-i18n="settings.exposeAllModels">Claude 模型菜单</strong>
+            <strong data-i18n="settings.exposeAllModels">Claude model menu</strong>
             <label class="switch-label only-switch"><input type="checkbox" id="exposeAllProviderModels"><span class="switch-ui"></span></label>
           </div>
           <div class="settings-row">
-            <strong data-i18n="settings.updateUrl">更新地址</strong>
+            <label for="settingsUpdateUrl"><strong data-i18n="settings.updateUrl">Update URL</strong></label>
             <input class="form-control form-control-lg" type="url" id="settingsUpdateUrl" placeholder="https://github.com/owner/repo/releases/latest/download/latest.json">
           </div>
           <div class="settings-row settings-row-stack">
             <div class="settings-label-with-switch">
-              <strong data-i18n="settings.upstreamProxy">上游代理</strong>
+              <label for="settingsUpstreamProxy"><strong data-i18n="settings.upstreamProxy">Upstream Proxy</strong></label>
               <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="settingsUpstreamProxyEnabled">
+                <input class="form-check-input" type="checkbox" id="settingsUpstreamProxyEnabled" aria-label="Upstream Proxy" data-i18n-aria-label="settings.upstreamProxy">
               </div>
             </div>
             <div>
               <div class="settings-actions">
                 <input class="form-control form-control-lg" type="text" id="settingsUpstreamProxy" placeholder="127.0.0.1:7890" style="flex:1 1 auto;">
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="detect-proxy"><i class="bi bi-search"></i><span data-i18n="settings.detectProxy">自动检测</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="detect-proxy"><i class="bi bi-search" aria-hidden="true"></i><span data-i18n="settings.detectProxy">Auto Detect</span></button>
               </div>
-              <p class="settings-note" data-i18n="settings.upstreamProxyHint">用于访问上游 API 的 HTTP/SOCKS 代理。留空则使用系统环境变量（HTTP_PROXY / HTTPS_PROXY / ALL_PROXY）。格式：host:port、http://host:port 或 socks5://host:port</p>
+              <p class="settings-note" data-i18n="settings.upstreamProxyHint">HTTP/SOCKS proxy for upstream APIs. Leave empty to use system environment variables (HTTP_PROXY / HTTPS_PROXY / ALL_PROXY). Format: host:port, http://host:port, or socks5://host:port</p>
             </div>
           </div>
           <div class="settings-row settings-row-stack">
-            <strong data-i18n="settings.thirdPartyCompat">第三方兼容</strong>
+            <strong data-i18n="settings.thirdPartyCompat">Third-party compatibility</strong>
             <div>
               <div class="settings-actions">
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="check-provider-compatibility"><i class="bi bi-patch-check"></i><span data-i18n="settings.checkCompatibility">检查兼容性</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="check-provider-compatibility"><i class="bi bi-patch-check" aria-hidden="true"></i><span data-i18n="settings.checkCompatibility">Check Compatibility</span></button>
               </div>
               <label class="switch-label settings-inline-switch">
-                <span data-i18n="settings.billingHeaderRectifier">优化 Claude Code 第三方网关缓存</span>
+                <span data-i18n="settings.billingHeaderRectifier">Optimize Claude Code third-party gateway cache</span>
                 <input type="checkbox" id="settingsBillingHeaderRectifier" checked>
                 <span class="switch-ui"></span>
               </label>
-              <p class="settings-note" data-i18n="settings.billingHeaderRectifierHint">开启后，本机 gateway 会移除 Claude Code 注入的动态 billing header，减少第三方网关 prompt cache 被打散的概率。</p>
+              <p class="settings-note" data-i18n="settings.billingHeaderRectifierHint">When enabled, the local gateway removes the dynamic billing header injected by Claude Code to reduce prompt cache fragmentation on third-party gateways.</p>
               <div class="compatibility-list" id="providerCompatibilityList"></div>
-              <p class="settings-note" data-i18n="settings.thirdPartyCompatHint">Anthropic 兼容接口是稳定主线；OpenAI Chat、new-api、CPA、OpenCode Go 属于实验适配，工具调用需要单独验证。</p>
+              <p class="settings-note" data-i18n="settings.thirdPartyCompatHint">Anthropic-compatible APIs are the stable path. OpenAI Chat, new-api, CPA, and OpenCode Go are experimental and require separate tool-call testing.</p>
             </div>
           </div>
           <div class="settings-row settings-row-stack">
-            <strong data-i18n="diagnostics.title">诊断与支持</strong>
+            <strong data-i18n="diagnostics.title">Diagnostics &amp; Support</strong>
             <div>
               <div class="settings-actions">
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="run-diagnostics"><i class="bi bi-activity"></i><span data-i18n="diagnostics.run">运行诊断</span></button>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="export-diagnostics"><i class="bi bi-shield-lock"></i><span data-i18n="diagnostics.export">导出诊断包</span></button>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="copy-diagnostics"><i class="bi bi-clipboard"></i><span data-i18n="diagnostics.copy">复制诊断包</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="run-diagnostics"><i class="bi bi-activity" aria-hidden="true"></i><span data-i18n="diagnostics.run">Run Diagnostics</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="export-diagnostics"><i class="bi bi-shield-lock" aria-hidden="true"></i><span data-i18n="diagnostics.export">Export Diagnostics</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="copy-diagnostics"><i class="bi bi-clipboard" aria-hidden="true"></i><span data-i18n="diagnostics.copy">Copy Diagnostics</span></button>
               </div>
               <div class="compatibility-list" id="diagnosticsResult"></div>
-              <p class="settings-note" data-i18n="diagnostics.hint">诊断包会自动脱敏 API Key、gateway key、Authorization 和 token，可用于提交 issue。</p>
+              <p class="settings-note" data-i18n="diagnostics.hint">The diagnostics package redacts API keys, gateway keys, Authorization headers, and tokens before sharing.</p>
             </div>
           </div>
           <div class="settings-row settings-row-stack">
-            <strong data-i18n="settings.configBackup">配置备份</strong>
+            <strong data-i18n="settings.configBackup">Config Backup</strong>
             <div>
               <div class="settings-actions">
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="backup-config"><i class="bi bi-shield-check"></i><span data-i18n="settings.backupNow">立即备份</span></button>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="export-config"><i class="bi bi-box-arrow-down"></i><span data-i18n="settings.exportConfig">导出配置</span></button>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="choose-import-config"><i class="bi bi-box-arrow-in-up"></i><span data-i18n="settings.importConfig">导入配置</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="backup-config"><i class="bi bi-shield-check" aria-hidden="true"></i><span data-i18n="settings.backupNow">Backup Now</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="export-config"><i class="bi bi-box-arrow-down" aria-hidden="true"></i><span data-i18n="settings.exportConfig">Export Config</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="choose-import-config"><i class="bi bi-box-arrow-in-up" aria-hidden="true"></i><span data-i18n="settings.importConfig">Import Config</span></button>
                 <input class="visually-hidden" type="file" id="configImportFile" accept="application/json,.json">
               </div>
               <div class="backup-list" id="backupList"></div>
-              <p class="settings-note" data-i18n="settings.configBackupHint">导出的配置会包含 API Key，请只保存在可信设备上。</p>
+              <p class="settings-note" data-i18n="settings.configBackupHint">Exported config includes API keys. Keep it only on trusted devices.</p>
             </div>
           </div>
           <div class="settings-row settings-row-stack" id="ccSwitchImportSection">
-            <strong data-i18n="settings.ccswitchImport">CC-Switch 导入</strong>
+            <strong data-i18n="settings.ccswitchImport">CC-Switch Import</strong>
             <div>
               <div class="settings-actions">
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="detect-ccswitch"><i class="bi bi-search"></i><span data-i18n="settings.ccswitchDetect">检测配置</span></button>
-                <button class="btn btn-outline-primary btn-sm" type="button" data-action="import-ccswitch"><i class="bi bi-box-arrow-in-down"></i><span data-i18n="settings.ccswitchImportButton">导入兼容项</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="detect-ccswitch"><i class="bi bi-search" aria-hidden="true"></i><span data-i18n="settings.ccswitchDetect">Detect Config</span></button>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-action="import-ccswitch"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i><span data-i18n="settings.ccswitchImportButton">Import Compatible</span></button>
               </div>
               <div class="ccswitch-import-list" id="ccSwitchImportList"></div>
-              <p class="settings-note" data-i18n="settings.ccswitchImportHint">只导入 Anthropic 兼容配置；OpenAI 格式会显示为暂不导入，避免转换风险。</p>
+              <p class="settings-note" data-i18n="settings.ccswitchImportHint">Only Anthropic-compatible configs are imported. OpenAI formats are shown but skipped to avoid conversion risk.</p>
             </div>
           </div>
         </article>
 
         <article class="panel about-panel">
-          <h2 data-i18n="settings.about">关于</h2>
-          <div class="about-row"><span data-i18n="settings.version">版本</span><strong>1.0.26</strong></div>
-          <div class="about-row"><span data-i18n="settings.license">许可证</span><strong>MIT License</strong></div>
-          <div class="about-row"><span data-i18n="settings.checkUpdate">检查更新</span><span class="settings-actions inline-actions"><button class="btn btn-outline-primary btn-sm" type="button" data-action="check-update"><i class="bi bi-cloud-arrow-down"></i><span data-i18n="settings.checkUpdate">检查更新</span></button><button class="btn btn-primary btn-sm" id="settingsInstallUpdate" type="button" data-action="install-update" hidden><i class="bi bi-download"></i><span data-i18n="settings.installUpdate">下载并安装</span></button></span></div>
+          <h2 data-i18n="settings.about">About</h2>
+          <div class="about-row"><span data-i18n="settings.version">Version</span><strong>1.0.26</strong></div>
+          <div class="about-row"><span data-i18n="settings.license">License</span><strong>MIT License</strong></div>
+          <div class="about-row"><span data-i18n="settings.checkUpdate">Check for Updates</span><span class="settings-actions inline-actions"><button class="btn btn-outline-primary btn-sm" type="button" data-action="check-update"><i class="bi bi-cloud-arrow-down" aria-hidden="true"></i><span data-i18n="settings.checkUpdate">Check for Updates</span></button><button class="btn btn-primary btn-sm" id="settingsInstallUpdate" type="button" data-action="install-update" hidden><i class="bi bi-download" aria-hidden="true"></i><span data-i18n="settings.installUpdate">Download and Install</span></button></span></div>
           <p class="update-status" id="updateStatus"></p>
-          <div class="about-row"><span>GitHub</span><a href="https://github.com/lonr-6/cc-desktop-switch" target="_blank" rel="noreferrer"><i class="bi bi-box-arrow-up-right"></i></a></div>
+          <div class="about-row"><span>GitHub</span><a href="https://github.com/lonr-6/cc-desktop-switch" target="_blank" rel="noreferrer" aria-label="GitHub"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>
         </article>
       </section>
 
@@ -433,16 +444,16 @@
         <div class="guide-hero">
           <img src="assets/app-icon.png" alt="CC Desktop Switch icon">
           <div>
-            <h1 data-i18n="guide.title">使用引导</h1>
-            <p data-i18n="guide.subtitle">添加供应商后，按下面 3 步完成接入。</p>
+            <h1 data-i18n="guide.title">Getting Started</h1>
+            <p data-i18n="guide.subtitle">Add a provider, then complete setup in three steps.</p>
           </div>
         </div>
         <div class="timeline">
-          <article class="timeline-card"><span>1</span><i class="bi bi-plug"></i><div><h2 data-i18n="guide.step1">添加提供商</h2><p data-i18n="guide.step1Text">选择预设，填入 API Key，必要时调整模型映射。</p></div></article>
-          <article class="timeline-card"><span>2</span><i class="bi bi-magic"></i><div><h2 data-i18n="guide.step2">一键应用</h2><p data-i18n="guide.step2Text">点击“一键应用到 Claude 桌面版”，本工具会自动写入桌面版需要的连接信息。</p></div></article>
-          <article class="timeline-card"><span>3</span><i class="bi bi-arrow-repeat"></i><div><h2 data-i18n="guide.step3">重启 Claude 桌面版</h2><p data-i18n="guide.step3Text">重启后正常提问，消息会通过本工具转发到当前供应商；使用时请保持本工具后台运行。</p></div></article>
+          <article class="timeline-card"><span>1</span><i class="bi bi-plug" aria-hidden="true"></i><div><h2 data-i18n="guide.step1">Add Provider</h2><p data-i18n="guide.step1Text">Choose a preset, enter the API key, and adjust model mapping if needed.</p></div></article>
+          <article class="timeline-card"><span>2</span><i class="bi bi-magic" aria-hidden="true"></i><div><h2 data-i18n="guide.step2">Apply Once</h2><p data-i18n="guide.step2Text">Click Apply to Claude Desktop. This app writes the connection info Claude Desktop needs.</p></div></article>
+          <article class="timeline-card"><span>3</span><i class="bi bi-arrow-repeat" aria-hidden="true"></i><div><h2 data-i18n="guide.step3">Restart Claude Desktop</h2><p data-i18n="guide.step3Text">After restart, ask as usual. Keep this app running in the background while it forwards messages to the active provider.</p></div></article>
         </div>
-        <a class="btn btn-primary btn-lg guide-start" href="#providers/add"><i class="bi bi-arrow-right-circle"></i><span data-i18n="guide.start">开始使用</span></a>
+        <a class="btn btn-primary btn-lg guide-start" href="#providers/add"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i><span data-i18n="guide.start">Start</span></a>
       </section>
     </main>
 
@@ -450,13 +461,13 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" data-i18n="providers.deleteTitle">删除提供商</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title" data-i18n="providers.deleteTitle">Delete Provider</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-i18n-aria-label="common.close"></button>
           </div>
-          <div class="modal-body" data-i18n="providers.deleteMessage">确认删除这个提供商吗？此操作会更新当前配置文件。</div>
+          <div class="modal-body" data-i18n="providers.deleteMessage">Delete this provider? This will update the current configuration file.</div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">取消</button>
-            <button type="button" class="btn btn-danger" id="confirmDelete" data-i18n="common.delete">删除</button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDelete" data-i18n="common.delete">Delete</button>
           </div>
         </div>
       </div>
@@ -466,14 +477,14 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content restart-modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" data-i18n="restartReminder.title">请重启 Claude 桌面版</h5>
+            <h5 class="modal-title" data-i18n="restartReminder.title">Restart Claude Desktop</h5>
           </div>
           <div class="modal-body">
-            <p data-i18n="restartReminder.body">已切换供应商并同步模型列表。请关闭并重新打开 Claude 桌面版，否则主面板可能还在使用旧模型。</p>
+            <p data-i18n="restartReminder.body">The provider and model list were synced. Close and reopen Claude Desktop, otherwise the main panel may keep using the old model.</p>
           </div>
           <div class="modal-footer restart-modal-footer">
-            <label class="restart-reminder-check"><input type="checkbox" id="restartReminderDontShow"><span data-i18n="restartReminder.dontShow">不再提醒</span></label>
-            <button type="button" class="btn btn-primary" id="restartReminderAck" data-i18n="restartReminder.ack">我已知晓</button>
+            <label class="restart-reminder-check"><input type="checkbox" id="restartReminderDontShow"><span data-i18n="restartReminder.dontShow">Don't show again</span></label>
+            <button type="button" class="btn btn-primary" id="restartReminderAck" data-i18n="restartReminder.ack">I understand</button>
           </div>
         </div>
       </div>

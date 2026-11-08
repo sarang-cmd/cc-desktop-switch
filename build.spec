@@ -1,15 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-CC Desktop Switch - PyInstaller 构建配置
+CC Desktop Switch - PyInstaller build configuration
 
-使用方法：
-    pyinstaller build.spec                    # 文件夹模式（启动快）
-    set CCDS_ONEFILE=1 && pyinstaller build.spec  # 单文件 exe（便携）
-    set CCDS_CONSOLE=1 && pyinstaller build.spec  # 调试时显示控制台
+Usage:
+    pyinstaller build.spec                          # folder build (fast startup)
+    set CCDS_ONEFILE=1 && pyinstaller build.spec    # single-file exe (portable)
+    set CCDS_CONSOLE=1 && pyinstaller build.spec    # show console while debugging
 
-输出：
-    dist/CC-Desktop-Switch/        ← 文件夹模式
-    dist/CC-Desktop-Switch.exe     ← 单文件模式（加 --onefile）
+Output:
+    dist/CC-Desktop-Switch/        <- folder build
+    dist/CC-Desktop-Switch.exe     <- single-file build (add --onefile)
 """
 
 import os

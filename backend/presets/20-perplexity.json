@@ -1,0 +1,15 @@
+{
+  "id": "perplexity",
+  "name": "Perplexity",
+  "baseUrl": "https://api.perplexity.ai",
+  "baseUrlHint": "Perplexity Sonar search-grounded OpenAI-compatible API",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "sonar-pro",
+    "haiku": "sonar",
+    "opus": "sonar-reasoning-pro",
+    "default": "sonar-pro"
+  },
+  "isBuiltin": true
+}

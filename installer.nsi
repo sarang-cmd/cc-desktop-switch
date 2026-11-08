@@ -46,8 +46,10 @@ Var UninstallIsUpgrade
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 
-!insertmacro MUI_LANGUAGE "SimpChinese"
+; English is the default installer language; Simplified Chinese stays available
+; as a secondary language for users who select it in the installer UI.
 !insertmacro MUI_LANGUAGE "English"
+!insertmacro MUI_LANGUAGE "SimpChinese"
 
 Function .onInit
     ReadRegStr $R1 HKLM "${PRODUCT_UNINST_KEY}" "InstallLocation"

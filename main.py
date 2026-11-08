@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CC Desktop Switch - 启动入口"""
+"""CC Desktop Switch - Application entrypoint."""
 
 import argparse
 import ctypes
@@ -8,30 +8,31 @@ import sys
 import threading
 import time
 import traceback
-from pathlib import Path
 import webbrowser
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request as UrlRequest, urlopen
 
 import uvicorn
 
+from backend import config as cfg
+from backend import i18n
+from backend import registry
 from backend.main import (
+    _start_proxy_server,
+    _stop_proxy_server,
     create_admin_app,
     desktop_config_target_for_provider,
     get_admin_token,
     register_app_activation_handler,
     register_update_quit_handler,
-    _start_proxy_server,
-    _stop_proxy_server,
 )
-from backend import config as cfg
-from backend import registry
 
 
 APP_NAME = "CC Desktop Switch"
 APP_VERSION = "1.0.26"
-TRAY_OPEN_LABEL = "打开 CC Desktop Switch"
-TRAY_QUIT_LABEL = "退出"
+TRAY_OPEN_LABEL = i18n.get_text("tray.open", "en")
+TRAY_QUIT_LABEL = i18n.get_text("tray.quit", "en")
 _macos_app_delegate = None
 _macos_status_item = None
 _macos_status_delegate = None
@@ -44,7 +45,7 @@ SINGLE_INSTANCE_MUTEX_NAME = "Local\\CCDesktopSwitch.SingleInstance"
 
 
 def safe_print(message: str):
-    """windowed exe 没有控制台时，print 不能影响主流程。"""
+    """Print safely without failing when running as a windowed executable with no console."""
     stream = getattr(sys, "stdout", None)
     if not stream:
         return
@@ -55,7 +56,7 @@ def safe_print(message: str):
 
 
 def show_message_box(title: str, message: str) -> bool:
-    """显示原生提示框；不可用时返回 False。"""
+    """Display a native message box on Windows; return False when unavailable."""
     try:
         ctypes.windll.user32.MessageBoxW(
             None,
@@ -70,7 +71,7 @@ def show_message_box(title: str, message: str) -> bool:
 
 
 def show_message_box_async(title: str, message: str):
-    """在独立线程弹提示框，避免阻塞托盘菜单回调。"""
+    """Display a message box on a background thread so tray menu callbacks do not block."""
     threading.Thread(
         target=show_message_box,
         args=(title, message),
@@ -79,7 +80,7 @@ def show_message_box_async(title: str, message: str):
 
 
 def acquire_single_instance_lock() -> bool:
-    """Windows 下创建单实例互斥锁；返回 False 表示已有实例在运行。"""
+    """Create a single-instance mutex on Windows; return False if an instance is already running."""
     global _single_instance_mutex
     if sys.platform != "win32":
         return True
@@ -102,7 +103,7 @@ def acquire_single_instance_lock() -> bool:
 
 
 def release_single_instance_lock():
-    """释放单实例互斥锁句柄。"""
+    """Release the single-instance mutex handle."""
     global _single_instance_mutex
     if sys.platform != "win32" or not _single_instance_mutex:
         return
@@ -115,7 +116,7 @@ def release_single_instance_lock():
 
 
 def request_existing_instance_activate(admin_port: int, timeout: float = 3.0) -> bool:
-    """通知已有实例显示窗口；成功唤起时返回 True。"""
+    """Notify an existing running instance to show its window; return True if handled."""
     activate_url = f"http://127.0.0.1:{admin_port}/api/app/activate"
     deadline = time.time() + max(timeout, 0.0)
 
@@ -147,7 +148,7 @@ def request_existing_instance_activate(admin_port: int, timeout: float = 3.0) ->
 
 
 def write_crash_log():
-    """打包为 windowed exe 后没有控制台，崩溃信息写入本机日志。"""
+    """Write crash tracebacks to a local log file when running as a windowed executable."""
     try:
         cfg.ensure_config_dir()
         log_path = Path(cfg.CONFIG_DIR) / "ccds-crash.log"
@@ -157,7 +158,7 @@ def write_crash_log():
 
 
 def parse_args():
-    """解析启动参数。默认走桌面窗口，浏览器模式只作为备用。"""
+    """Parse CLI arguments. Defaults to the native desktop window, with browser mode as fallback."""
     parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument(
         "--browser",
@@ -179,7 +180,7 @@ def parse_args():
 
 
 def wait_for_admin(url: str, timeout: float = 12.0) -> bool:
-    """等待管理后台可访问，避免窗口先打开后白屏。"""
+    """Wait until the admin server is reachable before opening the UI window."""
     deadline = time.time() + timeout
     base_url = url.split("#", 1)[0].rstrip("/")
     status_url = f"{base_url}/api/ready"
@@ -196,17 +197,17 @@ def wait_for_admin(url: str, timeout: float = 12.0) -> bool:
 
 
 def admin_ui_url(admin_port: int) -> str:
-    """生成带本机管理 token 的前端入口 URL。"""
+    """Build the frontend entrypoint URL containing the local admin token."""
     return f"http://127.0.0.1:{admin_port}/#token={get_admin_token()}"
 
 
 def admin_public_url(admin_port: int) -> str:
-    """生成不含 token 的管理后台展示 URL。"""
+    """Build the token-free display URL for the admin server."""
     return f"http://127.0.0.1:{admin_port}"
 
 
 def build_admin_server(admin_app, port: int) -> uvicorn.Server:
-    """创建可由桌面窗口生命周期控制的管理后台服务器。"""
+    """Create the admin uvicorn server controlled by the desktop window lifecycle."""
     server_config = uvicorn.Config(
         admin_app,
         host="127.0.0.1",
@@ -219,7 +220,7 @@ def build_admin_server(admin_app, port: int) -> uvicorn.Server:
 
 
 def start_admin_server(admin_app, port: int):
-    """后台线程启动管理后台，供 WebView 或浏览器访问。"""
+    """Start the admin server on a daemon thread for WebView or browser access."""
     server = build_admin_server(admin_app, port)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
@@ -266,7 +267,7 @@ def _macos_should_quit_from_close_event() -> bool:
 
 
 def _macos_hide_dock_icon(AppKit) -> bool:
-    """把 macOS 应用保持为 accessory 模式，避免出现在 Dock 栏。"""
+    """Keep the macOS app in accessory activation policy so it stays out of the Dock."""
     try:
         policy = getattr(AppKit, "NSApplicationActivationPolicyAccessory")
         AppKit.NSApp.setActivationPolicy_(policy)
@@ -277,7 +278,7 @@ def _macos_hide_dock_icon(AppKit) -> bool:
 
 
 def _macos_status_bar_image(AppKit, Foundation):
-    """使用 macOS template image，让状态栏图标自动适配深浅色模式。"""
+    """Use a macOS template symbol image so the menu bar icon adapts to light and dark mode."""
     try:
         image = AppKit.NSImage.imageWithSystemSymbolName_accessibilityDescription_(
             "arrow.triangle.2.circlepath",
@@ -380,7 +381,7 @@ def _install_macos_reopen_handler(window, controller):
 
 
 class DesktopTrayController:
-    """系统托盘控制器：关闭窗口时隐藏，托盘菜单里显式退出。"""
+    """System tray controller: hide window on close and quit explicitly from the tray menu."""
 
     def __init__(self, window, icon_path: Path):
         self.window = window
@@ -393,7 +394,7 @@ class DesktopTrayController:
         self.window_hidden = False
 
     def start(self) -> bool:
-        """启动系统托盘图标。依赖缺失时返回 False，不影响主窗口打开。"""
+        """Start the system tray icon; return False when dependencies are unavailable."""
         if sys.platform == "darwin":
             safe_print("system tray disabled on macOS: AppKit must run on the main thread")
             return False
@@ -417,31 +418,30 @@ class DesktopTrayController:
             return False
 
     def build_menu(self):
-        """构建托盘菜单，包含 provider 快速切换项。"""
+        """Build the tray menu including quick provider switching items."""
         if not self.pystray:
             return None
         items = [
-            self.pystray.MenuItem(TRAY_OPEN_LABEL, self.show_window, default=True),
+            self.pystray.MenuItem(i18n.t("tray.open"), self.show_window, default=True),
             self.pystray.Menu.SEPARATOR,
         ]
         items.extend(self.provider_menu_items())
         items.extend([
             self.pystray.Menu.SEPARATOR,
-            self.pystray.MenuItem(TRAY_QUIT_LABEL, self.quit_app),
+            self.pystray.MenuItem(i18n.t("tray.quit"), self.quit_app),
         ])
         return self.pystray.Menu(*items)
 
     def provider_menu_items(self):
-        """返回 provider 切换菜单项。"""
+        """Return provider switch menu items."""
         if not self.pystray:
             return []
         config = cfg.load_config()
-        active_id = config.get("activeProvider")
         providers = config.get("providers", [])
         if not providers:
-            return [self.pystray.MenuItem("暂无提供商", None, enabled=False)]
+            return [self.pystray.MenuItem(i18n.t("tray.no_providers"), None, enabled=False)]
 
-        items = [self.pystray.MenuItem("切换提供商", None, enabled=False)]
+        items = [self.pystray.MenuItem(i18n.t("tray.switch_provider"), None, enabled=False)]
         for provider in providers:
             provider_id = provider.get("id")
             name = provider.get("name", "Unnamed Provider")
@@ -458,15 +458,13 @@ class DesktopTrayController:
         return switch
 
     def switch_provider(self, provider_id: str) -> bool:
-        """从托盘菜单切换默认 provider。"""
+        """Switch the active default provider from the system tray menu."""
         if not provider_id:
             return False
-        previous_id = cfg.load_config().get("activeProvider")
         if not cfg.set_active_provider(provider_id):
             return False
         provider = cfg.get_provider(provider_id)
         desktop_message = ""
-        desktop_synced = False
         try:
             if provider:
                 settings = cfg.get_settings()
@@ -482,36 +480,42 @@ class DesktopTrayController:
                 )
                 if target.get("requiresProxy"):
                     _start_proxy_server(settings.get("proxyPort", 18080), restart=True)
-                desktop_synced = bool(result.get("success"))
-                desktop_message = "，桌面版配置已同步，重启 Claude 后生效" if result.get("success") else "，请重新一键应用到 Claude 桌面版"
+                desktop_message = (
+                    i18n.t("tray.desktop_synced_suffix")
+                    if result.get("success")
+                    else i18n.t("tray.desktop_reapply_suffix")
+                )
         except Exception as exc:
             safe_print(f"sync desktop config failed: {exc}")
-            desktop_message = "，请重新一键应用到 Claude 桌面版"
+            desktop_message = i18n.t("tray.desktop_reapply_suffix")
         self.refresh_menu()
         try:
             if self.icon and provider:
-                self.icon.notify(f"已切换到 {provider.get('name', provider_id)}{desktop_message}", APP_NAME)
+                self.icon.notify(
+                    i18n.t(
+                        "tray.switched_notify",
+                        name=provider.get("name", provider_id),
+                        suffix=desktop_message,
+                    ),
+                    APP_NAME,
+                )
         except Exception:
             pass
         return True
 
     def show_desktop_restart_dialog(self, provider: dict, desktop_synced: bool = False):
-        """托盘切换 provider 后给出明确重启提醒。"""
-        provider_name = provider.get("name") or "当前提供商"
+        """Show a restart reminder after switching providers from the tray."""
+        provider_name = provider.get("name") or i18n.t("tray.current_provider")
         sync_line = (
-            "本工具已同步 Claude 桌面版模型配置。"
+            i18n.t("tray.restart_synced_detail")
             if desktop_synced
-            else "如果 Claude 桌面版已经配置过本工具，模型会在下次启动后生效。"
+            else i18n.t("tray.restart_pending_detail")
         )
-        message = (
-            f"已切换到：{provider_name}\n\n"
-            f"{sync_line}\n"
-            "请完全退出并重新打开 Claude 桌面版，然后再使用新模型。"
-        )
-        show_message_box_async("需要重启 Claude 桌面版", message)
+        message = i18n.t("tray.restart_body", name=provider_name, detail=sync_line)
+        show_message_box_async(i18n.t("tray.restart_title"), message)
 
     def refresh_menu(self):
-        """provider 变化后刷新托盘菜单。"""
+        """Refresh the tray menu after provider changes."""
         if not self.icon or not self.pystray:
             return
         try:
@@ -522,7 +526,7 @@ class DesktopTrayController:
             safe_print(f"refresh tray menu failed: {exc}")
 
     def handle_window_closing(self):
-        """pywebview closing 事件：返回 False 表示取消关闭。"""
+        """Handle pywebview closing event; return False to cancel closing and hide instead."""
         if self.exit_requested or _macos_should_quit_from_close_event():
             return None
 
@@ -555,7 +559,7 @@ class DesktopTrayController:
         self._notified = True
         try:
             self.icon.notify(
-                "程序仍在后台运行。右键托盘图标可打开或退出。",
+                i18n.t("tray.minimized_notify"),
                 APP_NAME,
             )
         except Exception:
@@ -578,7 +582,7 @@ class DesktopTrayController:
 
 
 def open_desktop_window(url: str) -> bool:
-    """打开原生桌面窗口。失败时返回 False，让调用方退回浏览器模式。"""
+    """Open the native desktop window; return False on failure so caller can fall back to browser mode."""
     try:
         import webview
     except Exception as exc:
@@ -665,13 +669,15 @@ def run_browser_mode(admin_app, admin_port: int, open_ui: bool = True):
     if open_ui:
         threading.Thread(target=open_browser_when_ready, args=(url,), daemon=True).start()
 
+    panel_label = i18n.t("startup.admin_panel")
+    stop_hint = i18n.t("startup.press_ctrl_c")
     safe_print(f"""
 ╔══════════════════════════════════════════╗
 ║       {APP_NAME} v{APP_VERSION}          ║
 ║                                          ║
-║  管理后台: {public_url}     ║
+║  {panel_label}: {public_url}
 ║                                          ║
-║  按 Ctrl+C 停止                          ║
+║  {stop_hint}
 ╚══════════════════════════════════════════╝
     """)
 
@@ -710,34 +716,30 @@ def run_desktop_mode(admin_app, admin_port: int):
 def main():
     args = parse_args()
 
-    # 确保配置目录存在
     cfg.ensure_config_dir()
 
-    # 读取设置
     settings = cfg.get_settings()
     admin_port = args.port or settings.get("adminPort", 18081)
     proxy_port = settings.get("proxyPort", 18080)
     auto_start_proxy = settings.get("autoStart", False)
 
     if not acquire_single_instance_lock():
-        safe_print("CC Desktop Switch 已经在运行，正在尝试唤起现有窗口...")
+        safe_print(i18n.t("single_instance.activating"))
         if request_existing_instance_activate(admin_port):
-            safe_print("已唤起现有实例；请查看任务栏或系统托盘。")
+            safe_print(i18n.t("single_instance.activated"))
         else:
-            safe_print("未能唤起现有实例；请从任务栏或系统托盘打开已有窗口。")
+            safe_print(i18n.t("single_instance.activate_failed"))
             show_message_box(
                 APP_NAME,
-                "CC Desktop Switch 已经在运行。\n\n请从任务栏或系统托盘打开已有窗口。",
+                i18n.t("single_instance.already_running_box"),
             )
         return
 
     try:
-        # 如果开启了自动启动代理
         if auto_start_proxy:
-            safe_print(f"  自动启动代理 (端口 {proxy_port})...")
+            safe_print(i18n.t("startup.auto_proxy", port=proxy_port))
             _start_proxy_server(proxy_port)
 
-        # 创建管理后台应用
         admin_app = create_admin_app()
 
         if args.server_only:

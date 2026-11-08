@@ -1,4 +1,4 @@
-"""Provider 辅助能力：模型列表、模型映射建议、余额/用量查询。"""
+"""Provider helper utilities: model list fetching, mapping suggestions, balance/usage queries, and protocol detection."""
 
 from __future__ import annotations
 
@@ -7,7 +7,9 @@ from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
+from backend import i18n
 from backend.api_adapters import normalize_api_format
+from backend.model_alias import model_mappings_with_legacy_aliases
 from backend.proxy import build_upstream_url, get_upstream_headers
 
 
@@ -39,10 +41,10 @@ def _replace_path_suffix(url: str, suffixes: tuple[str, ...], replacement: str) 
 
 
 def model_endpoint_candidates(provider: dict) -> list[str]:
-    """生成可能的模型列表 endpoint。
+    """Generate candidate model list endpoints for a provider.
 
-    不同国产 API 对 OpenAI/Anthropic 兼容层的 URL 约定不同，所以这里按常见
-    端点做少量候选，逐个尝试。
+    Different OpenAI/Anthropic-compatible APIs use varying path conventions,
+    so we build a small ordered list of candidate endpoints to probe.
     """
     base_url = _clean_base_url(provider.get("baseUrl", ""))
     if not base_url:
@@ -90,7 +92,7 @@ def _model_id_from_item(item: Any) -> str | None:
 
 
 def extract_model_ids(payload: Any) -> list[str]:
-    """从 OpenAI/Anthropic/通用模型列表响应中提取模型 ID。"""
+    """Extract model IDs from OpenAI, Anthropic, or generic model list responses."""
     candidates: list[Any] = []
     if isinstance(payload, list):
         candidates = payload
@@ -141,11 +143,8 @@ def _pick_model(model_ids: list[str], keywords: tuple[str, ...], fallback_index:
     return model_ids[min(fallback_index, len(model_ids) - 1)]
 
 
-from backend.model_alias import model_mappings_with_legacy_aliases
-
-
 def suggest_model_mappings(model_ids: list[str]) -> dict:
-    """根据模型名称给 Claude 默认槽位自动推荐映射。"""
+    """Suggest default Claude slot mappings based on model names."""
     usable = _usable_model_ids(model_ids)
     sonnet = _pick_model(
         usable,
@@ -174,10 +173,16 @@ def suggest_model_mappings(model_ids: list[str]) -> dict:
 
 
 async def fetch_provider_models(provider: dict) -> dict:
-    """调用 provider 模型列表接口并返回模型 ID 与推荐映射。"""
+    """Query the provider's model list endpoint and return model IDs and suggested mappings."""
     endpoints = model_endpoint_candidates(provider)
     if not endpoints:
-        return {"success": False, "message": "API 地址无效", "models": [], "suggested": {}}
+        return {
+            "success": False,
+            "code": "invalid_base_url",
+            "message": i18n.t("provider_tools.invalid_base_url"),
+            "models": [],
+            "suggested": {},
+        }
 
     headers = get_upstream_headers(provider)
     headers.pop("Content-Type", None)
@@ -196,7 +201,7 @@ async def fetch_provider_models(provider: dict) -> dict:
             try:
                 payload = response.json()
             except ValueError:
-                errors.append(f"{endpoint}: 非 JSON 响应")
+                errors.append(i18n.t("provider_tools.non_json_response", endpoint=endpoint))
                 continue
             model_ids = extract_model_ids(payload)
             if model_ids:
@@ -206,11 +211,12 @@ async def fetch_provider_models(provider: dict) -> dict:
                     "models": model_ids,
                     "suggested": suggest_model_mappings(model_ids),
                 }
-            errors.append(f"{endpoint}: 未发现模型列表")
+            errors.append(i18n.t("provider_tools.no_models_found", endpoint=endpoint))
 
     return {
         "success": False,
-        "message": "无法自动获取模型列表",
+        "code": "fetch_models_failed",
+        "message": i18n.t("provider_tools.fetch_models_failed"),
         "models": [],
         "suggested": {},
         "errors": errors[-5:],
@@ -272,7 +278,7 @@ def _money_item(label: str, remaining=None, total=None, used=None, unit: str = "
 
 
 def normalize_balance_payload(kind: str, payload: dict) -> list[dict]:
-    """把不同厂商的余额/用量响应整理为统一结构。"""
+    """Normalize vendor-specific balance/usage responses into a unified list."""
     if kind == "deepseek":
         items = []
         for item in payload.get("balance_infos", []) or []:
@@ -310,9 +316,13 @@ def normalize_balance_payload(kind: str, payload: dict) -> list[dict]:
 
 
 async def query_provider_usage(provider: dict) -> dict:
-    """查询 provider 余额/用量。当前仅支持已知公开余额接口的厂商。"""
+    """Query provider balance/usage for vendors with known public balance endpoints."""
     if not provider.get("apiKey"):
-        return {"success": False, "message": "请先保存 API Key"}
+        return {
+            "success": False,
+            "code": "save_api_key_first",
+            "message": i18n.t("provider_tools.save_api_key_first"),
+        }
 
     endpoint_info = balance_endpoint(provider)
     if not endpoint_info:
@@ -320,7 +330,8 @@ async def query_provider_usage(provider: dict) -> dict:
             "success": True,
             "supported": False,
             "items": [],
-            "message": "这个提供商暂未适配余额/用量接口",
+            "code": "usage_unsupported",
+            "message": i18n.t("provider_tools.usage_unsupported"),
         }
 
     kind, endpoint = endpoint_info
@@ -335,7 +346,8 @@ async def query_provider_usage(provider: dict) -> dict:
             "success": True,
             "supported": True,
             "ok": False,
-            "message": f"查询失败：{exc.__class__.__name__}",
+            "code": "usage_query_failed",
+            "message": i18n.t("provider_tools.usage_query_failed", error=exc.__class__.__name__),
             "items": [],
         }
 
@@ -345,7 +357,8 @@ async def query_provider_usage(provider: dict) -> dict:
             "supported": True,
             "ok": False,
             "statusCode": response.status_code,
-            "message": f"余额接口返回 HTTP {response.status_code}",
+            "code": "usage_http_error",
+            "message": i18n.t("provider_tools.usage_http_error", status=response.status_code),
             "items": [],
         }
 
@@ -356,7 +369,8 @@ async def query_provider_usage(provider: dict) -> dict:
             "success": True,
             "supported": True,
             "ok": False,
-            "message": "余额接口返回了非 JSON 响应",
+            "code": "usage_non_json",
+            "message": i18n.t("provider_tools.usage_non_json"),
             "items": [],
         }
 
@@ -367,41 +381,34 @@ async def query_provider_usage(provider: dict) -> dict:
         "ok": bool(items),
         "endpoint": endpoint,
         "items": items,
-        "message": "查询完成" if items else "余额接口响应中未识别到余额字段",
+        "code": "usage_ok" if items else "usage_no_fields",
+        "message": i18n.t("provider_tools.usage_ok") if items else i18n.t("provider_tools.usage_no_fields"),
     }
 
 
 async def check_model_available(provider: dict, model: str) -> dict:
-    """通过最小对话请求检测模型是否可用。
-
-    发送一个极小的 chat completion 请求，根据 HTTP 状态码和响应体判断模型是否可用。
-    不消费有效 token（max_tokens=1，内容极短，多数提供商不计费或费用可忽略）。
-    """
+    """Check whether a specific model is available via a minimal chat completion request."""
     api_format = normalize_api_format(provider.get("apiFormat", "anthropic"))
     headers = get_upstream_headers(provider)
     url = build_upstream_url(provider.get("baseUrl", ""), api_format)
 
-    if api_format == "openai_chat":
-        body = {
-            "model": model,
-            "messages": [{"role": "user", "content": "hi"}],
-            "max_tokens": 1,
-            "stream": False,
-        }
-    else:
-        body = {
-            "model": model,
-            "messages": [{"role": "user", "content": "hi"}],
-            "max_tokens": 1,
-            "stream": False,
-        }
+    body = {
+        "model": model,
+        "messages": [{"role": "user", "content": "hi"}],
+        "max_tokens": 1,
+        "stream": False,
+    }
 
     try:
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             resp = await client.post(url, json=body, headers=headers)
 
         if resp.is_success:
-            return {"available": True, "message": "模型响应正常"}
+            return {
+                "available": True,
+                "code": "model_ok",
+                "message": i18n.t("provider_tools.model_ok"),
+            }
 
         try:
             error_data = resp.json()
@@ -416,14 +423,22 @@ async def check_model_available(provider: dict, model: str) -> dict:
         return {"available": False, "message": error_msg or f"HTTP {resp.status_code}"}
 
     except httpx.TimeoutException:
-        return {"available": False, "message": "请求超时"}
+        return {
+            "available": False,
+            "code": "timeout",
+            "message": i18n.t("provider_tools.timeout"),
+        }
     except httpx.ConnectError:
-        return {"available": False, "message": "连接失败，请检查网络"}
+        return {
+            "available": False,
+            "code": "connect_failed",
+            "message": i18n.t("provider_tools.connect_failed"),
+        }
     except Exception as e:
         return {"available": False, "message": f"{e.__class__.__name__}: {str(e)[:200]}"}
 
 
-# ── 协议类型自动探测 ──
+# ── Protocol Format Auto-Detection ──
 
 STANDARD_ENDPOINTS = [
     ("/v1/messages", "anthropic"),
@@ -436,11 +451,11 @@ STANDARD_ENDPOINTS = [
 
 
 def _detect_format_from_response(data: dict, status_code: int, expected_format: str) -> tuple[bool, str]:
-    """根据响应体精确判断协议类型。"""
+    """Identify protocol format from response body and status code."""
     if not isinstance(data, dict):
         return False, ""
 
-    # 成功响应判断
+    # Success response check
     if status_code == 200:
         if expected_format == "anthropic":
             if data.get("type") == "message" and isinstance(data.get("content"), list):
@@ -452,7 +467,7 @@ def _detect_format_from_response(data: dict, status_code: int, expected_format: 
             if "output" in data and isinstance(data.get("output"), list):
                 return True, "high"
 
-    # 错误响应判断
+    # Error response check
     if status_code in {400, 422}:
         if expected_format == "anthropic":
             if data.get("type") == "error" and isinstance(data.get("error"), dict):
@@ -466,7 +481,7 @@ def _detect_format_from_response(data: dict, status_code: int, expected_format: 
 
 
 async def _probe_single_endpoint(url: str, expected_format: str, api_key: str) -> dict[str, Any]:
-    """向单个端点发送探测请求。"""
+    """Send a probe request to a single endpoint."""
     body: dict[str, Any] = {}
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -512,14 +527,14 @@ async def _probe_single_endpoint(url: str, expected_format: str, api_key: str) -
 
 
 async def detect_api_format(base_url: str, api_key: str = "") -> dict[str, Any]:
-    """对标准化端点发送探测请求，精确判断协议类型。
-
-    返回 {"success": true, "apiFormat": ..., "endpoint": ..., "confidence": ...}
-    或 {"success": false, "message": ...}
-    """
+    """Probe standard endpoints to detect the upstream API protocol format."""
     clean = str(base_url or "").strip().rstrip("/")
     if not clean:
-        return {"success": False, "message": "请填写 Base URL"}
+        return {
+            "success": False,
+            "code": "enter_base_url",
+            "message": i18n.t("provider_tools.enter_base_url"),
+        }
 
     for path, fmt in STANDARD_ENDPOINTS:
         url = f"{clean}{path}"
@@ -532,4 +547,8 @@ async def detect_api_format(base_url: str, api_key: str = "") -> dict[str, Any]:
                 "confidence": result.get("confidence", "medium"),
             }
 
-    return {"success": False, "message": "未能识别协议类型，请手动选择"}
+    return {
+        "success": False,
+        "code": "detect_failed",
+        "message": i18n.t("provider_tools.detect_failed"),
+    }

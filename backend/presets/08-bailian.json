@@ -1,6 +1,6 @@
 {
   "id": "bailian",
-  "name": "阿里云百炼",
+  "name": "Alibaba Cloud Bailian",
   "baseUrl": "https://dashscope.aliyuncs.com/apps/anthropic",
   "authScheme": "x-api-key",
   "apiFormat": "anthropic",
@@ -12,8 +12,8 @@
   },
   "modelOptions": {
     "qwen_1m": {
-      "label": "开启千问 1M 上下文",
-      "description": "阿里云文档确认 qwen3.6-plus / qwen3.6-flash 支持 1M。勾选后会把 1M 能力写入 Claude 桌面版；不勾选则按普通上下文显示。",
+      "label": "Enable Qwen 1M Context",
+      "description": "Alibaba Cloud docs confirm qwen3.6-plus and qwen3.6-flash support 1M context. When checked, writes 1M capability to Claude Desktop; when unchecked, displays standard context.",
       "modelCapabilities": {
         "qwen3.6-plus": {
           "supports1m": true

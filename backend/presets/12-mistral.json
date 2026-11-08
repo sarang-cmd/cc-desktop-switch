@@ -1,0 +1,15 @@
+{
+  "id": "mistral",
+  "name": "Mistral AI",
+  "baseUrl": "https://api.mistral.ai/v1",
+  "baseUrlHint": "Official Mistral AI La Plateforme OpenAI-compatible endpoint",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "mistral-large-latest",
+    "haiku": "ministral-8b-latest",
+    "opus": "codestral-latest",
+    "default": "mistral-large-latest"
+  },
+  "isBuiltin": true
+}

@@ -1,0 +1,15 @@
+{
+  "id": "cohere",
+  "name": "Cohere",
+  "baseUrl": "https://api.cohere.ai/compatibility/v1",
+  "baseUrlHint": "Cohere Command A/R OpenAI-compatibility endpoint",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "command-a-03-2025",
+    "haiku": "command-r7b-12-2024",
+    "opus": "command-a-03-2025",
+    "default": "command-a-03-2025"
+  },
+  "isBuiltin": true
+}

@@ -1,0 +1,15 @@
+{
+  "id": "openrouter",
+  "name": "OpenRouter",
+  "baseUrl": "https://openrouter.ai/api/v1",
+  "baseUrlHint": "Unified OpenRouter gateway for 300+ models across Anthropic, OpenAI, Meta, Google, and DeepSeek",
+  "authScheme": "bearer",
+  "apiFormat": "openai_chat",
+  "models": {
+    "sonnet": "anthropic/claude-sonnet-4",
+    "haiku": "anthropic/claude-3.5-haiku",
+    "opus": "anthropic/claude-opus-4",
+    "default": "anthropic/claude-sonnet-4"
+  },
+  "isBuiltin": true
+}
