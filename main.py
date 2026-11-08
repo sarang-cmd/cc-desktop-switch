@@ -18,6 +18,7 @@ import uvicorn
 from backend import config as cfg
 from backend import i18n
 from backend import registry
+from backend.windows_claude_diagnostics import collect_windows_claude_diagnostics
 from backend.main import (
     _start_proxy_server,
     _stop_proxy_server,
@@ -165,6 +166,13 @@ def parse_args():
         "--browser",
         action="store_true",
         help="Open the system browser instead of the desktop window.",
+    )
+    parser.add_argument(
+        "--windows-claude-diagnostics",
+        "--claude-diagnostics",
+        dest="windows_claude_diagnostics",
+        action="store_true",
+        help="Print redacted, read-only Claude Desktop Windows policy and config diagnostics, then exit.",
     )
     parser.add_argument(
         "--server-only",
@@ -716,6 +724,11 @@ def run_desktop_mode(admin_app, admin_port: int):
 
 def main():
     args = parse_args()
+
+    if getattr(args, "windows_claude_diagnostics", False):
+        report = collect_windows_claude_diagnostics()
+        safe_print(json.dumps(report, ensure_ascii=False, indent=2))
+        return
 
     cfg.ensure_config_dir()
 

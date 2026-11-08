@@ -15,7 +15,7 @@
       link.href = url || releaseUrl;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      if (name) link.setAttribute("aria-label", `${link.textContent.trim().replace(/\s*↗$/, "")}: ${name}`);
+      if (name) link.setAttribute("aria-label", `${link.textContent.trim()}: ${name}`);
     });
   };
 

@@ -23,7 +23,7 @@ The project repository does not document a remote account, cloud-sync service, o
 
 ## Public website
 
-The product website is a static GitHub Pages site. Its homepage requests the latest release details from the GitHub API to display the current version and create direct download links. Downloads are served by GitHub. GitHub's privacy terms govern its hosting, API, download services, and service logs; the project does not control GitHub's server-side retention.
+The product website is a static site hosted by Vercel. Its homepage requests the latest release details from the GitHub API to display the current version and create direct download links. Downloads are served by GitHub. Vercel's privacy terms govern site hosting and its service logs; GitHub's privacy terms govern its API and download services. The project does not control either provider's server-side retention.
 
 ## Diagnostics and support
 

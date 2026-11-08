@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="title">
-  <title id="title">Junction mark</title>
-  <path d="M11 10v9a8 8 0 0 0 8 8h10a8 8 0 0 1 8 8v3" stroke="#315c91" stroke-width="3.4" stroke-linecap="round"/>
-  <path d="M11 10v9a8 8 0 0 1 8-8h3" stroke="#315c91" stroke-width="3.4" stroke-linecap="round"/>
-  <circle cx="11" cy="10" r="4" fill="#315c91"/>
-  <circle cx="22" cy="11" r="4" fill="#a7b9cf"/>
-  <circle cx="37" cy="38" r="4" fill="#315c91"/>
-  <circle cx="29" cy="27" r="4.4" fill="#edf0f3" stroke="#315c91" stroke-width="2.6"/>
-</svg>

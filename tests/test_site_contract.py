@@ -1,4 +1,3 @@
-import re
 import unittest
 from pathlib import Path
 
@@ -54,11 +53,12 @@ class SiteContractTests(unittest.TestCase):
         self.assertEqual(source, shipped)
         self.assertIn('alt="Junction\'s model-routing patchboard', (SITE / "index.html").read_text(encoding="utf-8"))
 
-    def test_pages_workflow_deploys_the_static_site_directory(self):
-        workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
-        self.assertIn("actions/upload-pages-artifact@v3", workflow)
-        self.assertRegex(workflow, re.compile(r"path:\s*site\b"))
-        self.assertIn("actions/deploy-pages@v4", workflow)
+    def test_vercel_is_the_documented_static_site_host(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        privacy = (SITE / "privacy.html").read_text(encoding="utf-8")
+        self.assertIn("https://junction-nu.vercel.app/", readme)
+        self.assertIn("hosted by Vercel", privacy)
+        self.assertFalse((ROOT / ".github/workflows/pages.yml").exists())
 
 
 if __name__ == "__main__":
