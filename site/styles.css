@@ -52,7 +52,9 @@ h1 span, .section-heading h2 span { color: var(--blue); }
 .button:hover { transform: translateY(-1px); }
 .button-primary { color: #fff; background: var(--blue); box-shadow: 0 5px 14px rgba(49,92,145,.16); }
 .button-primary:hover { background: var(--blue-dark); box-shadow: 0 8px 18px rgba(49,92,145,.21); }
-.button-arrow { font-size: 18px; font-weight: 400; }
+.icon { width: 16px; height: 16px; flex: none; object-fit: contain; }
+.button-primary .icon { filter: brightness(0) invert(1); }
+.caption-icon { width: 17px; height: 17px; flex: none; }
 .text-link { display: inline-flex; align-items: center; gap: 8px; color: var(--blue-dark); font-size: 14px; font-weight: 650; text-decoration: none; }
 .text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .release-note { margin: 17px 0 0; color: #717a80; font-size: 12px; }
@@ -63,7 +65,7 @@ h1 span, .section-heading h2 span { color: var(--blue); }
 .visual-topbar > div { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
 .product-shot { width: 100%; border-radius: 7px 7px 0 0; border: 1px solid rgba(183,192,197,.6); object-fit: cover; object-position: top; }
 .visual-caption { display: flex; justify-content: flex-end; align-items: center; gap: 9px; margin: 15px 2px 0; color: #66717a; font-size: 12px; }
-.caption-mark { color: var(--blue); font-size: 16px; }
+.feature-icon { width: 34px; height: 34px; flex: none; opacity: .88; }
 .hero-orbit { position: absolute; top: 51px; right: -48px; width: 290px; height: 290px; border: 1px solid rgba(141,164,187,.17); border-radius: 50%; pointer-events: none; }
 .hero-orbit::before, .hero-orbit::after { position: absolute; inset: 27px; border: 1px solid rgba(141,164,187,.14); border-radius: 50%; content: ""; }
 .hero-orbit::after { inset: 58px; }
@@ -94,9 +96,6 @@ h1 span, .section-heading h2 span { color: var(--blue); }
 .route-sample { width: 150px; display: flex; align-items: center; justify-content: center; gap: 9px; color: #5c6974; font-size: 9px; }
 .route-sample i { width: 35px; height: 1px; background: #8da4bc; position: relative; }
 .route-sample i::after { position: absolute; top: -3px; right: 0; width: 7px; height: 7px; border-top: 1px solid #8da4bc; border-right: 1px solid #8da4bc; transform: rotate(45deg); content: ""; }
-.local-symbol { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #bfcbd3; border-radius: 50%; }
-.local-symbol::before { width: 19px; height: 19px; border: 2px solid var(--blue); border-radius: 50%; content: ""; }
-.local-symbol span { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
 .how { display: grid; grid-template-columns: .72fr 1.28fr; gap: 80px; padding-block: 73px 96px; border-top: 1px solid var(--line); }
 .how-heading h2 { max-width: 350px; }
 .steps { list-style: none; margin: 0; padding: 0; }

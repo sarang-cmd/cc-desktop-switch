@@ -14,7 +14,7 @@
   <a href="https://github.com/sarang-cmd/junction/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sarang-cmd/junction/total?label=downloads"></a>
 </p>
 
-产品网站：<https://sarang-cmd.github.io/junction/>
+产品网站：<https://junction-nu.vercel.app/>
 
 Junction 是一个面向 Claude Desktop 官方桌面客户端的轻量配置工具。它可以用桌面界面管理 DeepSeek、Kimi、智谱 GLM、阿里云百炼、小米 MiMo 等第三方 Anthropic 兼容 API 提供商，并一键写入 Claude Desktop 的第三方推理配置。
 

@@ -2,7 +2,7 @@
 
 **Manage Claude Desktop providers and model routes from one local app.**
 
-Product website: <https://sarang-cmd.github.io/junction/>
+Product website: <https://junction-nu.vercel.app/>
 
 
 Junction helps Windows and macOS users connect Claude Desktop to Anthropic-compatible and OpenAI-compatible API providers. Choose a provider, set the model routes you want, then apply the configuration to Claude Desktop.
