@@ -26,6 +26,18 @@ def _resolve_config_paths() -> tuple[str, str, str]:
 
 CONFIG_DIR, CONFIG_FILE, BACKUP_DIR = _resolve_config_paths()
 DEFAULT_UPDATE_URL = "https://github.com/sarang-cmd/junction/releases/latest/download/latest.json"
+COMPACT_SYSTEM_PROMPT_LIMIT_DEFAULT = 4000
+COMPACT_MESSAGE_LIMIT_DEFAULT = 12
+
+
+def _bounded_int(value, default: int, minimum: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError, OverflowError):
+        parsed = default
+    return max(minimum, min(maximum, parsed))
+
+
 LEGACY_UPDATE_URLS = {
     "https://github.com/lonr-6/cc-desktop-switch/releases/latest/download/latest.json",
     "https://github.com/sarang-cmd/cc-desktop-switch/releases/latest/download/latest.json",
@@ -101,6 +113,19 @@ def _normalize_provider(provider: dict) -> dict:
     normalized.setdefault("extraHeaders", {})
     normalized.setdefault("modelCapabilities", {})
     normalized.setdefault("requestOptions", {})
+    normalized["compactRequests"] = normalized.get("compactRequests") is True
+    normalized["compactSystemPromptLimit"] = _bounded_int(
+        normalized.get("compactSystemPromptLimit"),
+        COMPACT_SYSTEM_PROMPT_LIMIT_DEFAULT,
+        256,
+        50000,
+    )
+    normalized["compactMessageLimit"] = _bounded_int(
+        normalized.get("compactMessageLimit"),
+        COMPACT_MESSAGE_LIMIT_DEFAULT,
+        1,
+        200,
+    )
     normalized.setdefault("isBuiltin", False)
     normalized.setdefault("sortIndex", 0)
     normalized["models"] = normalize_model_mappings(normalized.get("models"))

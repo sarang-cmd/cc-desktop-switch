@@ -119,6 +119,9 @@
       extraHeaders: provider.extraHeaders || {},
       modelCapabilities: provider.modelCapabilities || {},
       requestOptions: provider.requestOptions || {},
+      compactRequests: provider.compactRequests === true,
+      compactSystemPromptLimit: Number(provider.compactSystemPromptLimit) || 4000,
+      compactMessageLimit: Number(provider.compactMessageLimit) || 12,
       default: provider.id === activeId,
       isBuiltin: !!provider.isBuiltin,
       mappings: {
@@ -144,6 +147,9 @@
       extraHeaders: payload.extraHeaders || {},
       modelCapabilities: payload.modelCapabilities || {},
       requestOptions: payload.requestOptions || {},
+      compactRequests: payload.compactRequests === true,
+      compactSystemPromptLimit: Number(payload.compactSystemPromptLimit) || 4000,
+      compactMessageLimit: Number(payload.compactMessageLimit) || 12,
     };
     if (payload.apiKey) {
       body.apiKey = payload.apiKey;

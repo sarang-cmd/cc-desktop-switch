@@ -1075,6 +1075,9 @@
       extraHeaders: selectedPreset?.extraHeaders || {},
       modelCapabilities: mappings ? capabilitiesForCurrentMappings(mappings) : normalizeCapabilities(formModelCapabilities),
       requestOptions: normalizeRequestOptions(formRequestOptions),
+      compactRequests: $("#providerCompactRequests").checked,
+      compactSystemPromptLimit: Number($("#providerCompactSystemLimit").value) || 4000,
+      compactMessageLimit: Number($("#providerCompactMessageLimit").value) || 12,
     };
     if (apiKey) {
       payload.apiKey = apiKey;
@@ -1365,6 +1368,25 @@
     }
   }
 
+  function syncCompactRequestControls() {
+    const enabled = $("#providerCompactRequests")?.checked === true;
+    const settings = $("#compactRequestsSettings");
+    const warning = $("#compactRequestsWarning");
+    const systemLimit = $("#providerCompactSystemLimit");
+    const messageLimit = $("#providerCompactMessageLimit");
+    if (settings) settings.hidden = !enabled;
+    if (warning) warning.hidden = !enabled;
+    if (systemLimit) systemLimit.disabled = !enabled;
+    if (messageLimit) messageLimit.disabled = !enabled;
+  }
+
+  function setCompactRequestFormState(options = {}) {
+    $("#providerCompactRequests").checked = options.compactRequests === true;
+    $("#providerCompactSystemLimit").value = Math.max(256, Math.min(50000, Number(options.compactSystemPromptLimit) || 4000));
+    $("#providerCompactMessageLimit").value = Math.max(1, Math.min(200, Number(options.compactMessageLimit) || 12));
+    syncCompactRequestControls();
+  }
+
   function resetProviderForm() {
     editingProviderId = null;
     selectedPreset = null;
@@ -1374,6 +1396,7 @@
     updatePresetSelection();
     formModelCapabilities = {};
     formRequestOptions = {};
+    setCompactRequestFormState();
     protocolDetected = false;
     setProviderFormMode("providersAdd.title");
     $("#providerName").value = "";
@@ -1399,6 +1422,7 @@
     setFormApiFormat(preset.apiFormat);
     formModelCapabilities = normalizeCapabilities(preset.modelCapabilities || {});
     formRequestOptions = normalizeRequestOptions(preset.requestOptions || {});
+    setCompactRequestFormState(preset);
     providerAvailableModels = [];
     setProviderMappings(preset.models || emptyMappings());
     renderPresetOptions(preset, preset.models || emptyMappings());
@@ -1426,6 +1450,7 @@
       };
     formModelCapabilities = normalizeCapabilities(provider.modelCapabilities || selectedPreset.modelCapabilities || {});
     formRequestOptions = normalizeRequestOptions(provider.requestOptions || selectedPreset.requestOptions || {});
+    setCompactRequestFormState(provider);
     setProviderFormMode("providersAdd.editTitle");
     $("#providerName").value = provider.name;
     $("#providerBaseUrl").value = provider.baseUrl;
@@ -2505,6 +2530,9 @@
       }
       if (event.target.id === "providerBaseUrl") {
         renderBaseUrlOptions();
+      }
+      if (event.target.id === "providerCompactRequests") {
+        syncCompactRequestControls();
       }
     });
 
