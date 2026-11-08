@@ -162,7 +162,8 @@ jobs:
 
   build_macos:
     name: Build macOS arm64
-    runs-on: macos-14
+    # macOS 14 Arm64 runners were retired in November 2026.
+    runs-on: macos-15
     needs: prepare
 
     steps:
