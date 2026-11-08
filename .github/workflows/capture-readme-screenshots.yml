@@ -32,7 +32,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/capture_readme_screenshots.py 2>&1 | tee capture.log
+          if python scripts/capture_readme_screenshots.py 2>&1 | tee capture.log; then
+            exit 0
+          fi
+          code=${PIPESTATUS[0]}
+          summary="$(tail -n 12 capture.log | tr '\\n' ' ' | cut -c1-1800)"
+          echo "::error title=Screenshot capture failed::$summary"
+          exit "$code"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
