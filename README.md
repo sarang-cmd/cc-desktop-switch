@@ -47,16 +47,16 @@ Presets provide a starting point for the endpoint, authentication scheme, API fo
 
 The Xiaomi MiMo Token Plan preset includes selectable regional clusters. You still need a valid account and API key for the selected service. Availability, model names, pricing, and terms are controlled by each provider.
 
-## Download v1.0.27
+## Download
 
-[Open the latest release page](https://github.com/sarang-cmd/junction/releases/latest) to download an installer or portable package. The currently published v1.0.27 assets retain their previous `CC-Desktop-Switch` filenames; Junction builds use the new product name.
+[Open the latest release page](https://github.com/sarang-cmd/junction/releases/latest) to download an installer or portable package. The published v1.0.28 release uses Junction-prefixed asset filenames.
 
-- **Windows x64 installer:** `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`
-- **Windows x64 portable:** `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`
-- **macOS Apple silicon installer:** `CC-Desktop-Switch-v1.0.27-macOS-arm64.pkg`
-- **macOS Apple silicon disk image:** `CC-Desktop-Switch-v1.0.27-macOS-arm64.dmg`
-- **macOS Intel installer:** `CC-Desktop-Switch-v1.0.27-macOS-x64.pkg`
-- **macOS Intel disk image:** `CC-Desktop-Switch-v1.0.27-macOS-x64.dmg`
+- **Windows x64 installer:** `Junction-v1.0.28-Windows-Setup.exe`
+- **Windows x64 portable:** `Junction-v1.0.28-Windows-Portable.zip`
+- **macOS Apple silicon installer:** `Junction-v1.0.28-macOS-arm64.pkg`
+- **macOS Apple silicon disk image:** `Junction-v1.0.28-macOS-arm64.dmg`
+- **macOS Intel installer:** `Junction-v1.0.28-macOS-x64.pkg`
+- **macOS Intel disk image:** `Junction-v1.0.28-macOS-x64.dmg`
 
 Each release includes SHA-256 files, detached signatures, the release public key, and an update manifest. Windows executables are not Authenticode-signed, so Windows may show an unknown publisher warning. Verify downloaded files against the included checksums and signatures if needed.
 

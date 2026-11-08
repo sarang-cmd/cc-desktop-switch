@@ -7,6 +7,14 @@
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+## v1.0.29
+
+Release notes: [docs/release-notes-v1.0.29.md](release-notes-v1.0.29.md)
+
+- Replaced the public website's neo-brutalist styling with a restrained neumorphic surface system.
+- Refined the homepage, product screenshot frame, download surfaces, navigation, and legal-page presentation.
+- Preserved the real product screenshot, release download behavior, responsive navigation, and legal draft content.
+
 ## v1.0.28
 
 Release notes: [docs/release-notes-v1.0.28.md](release-notes-v1.0.28.md)

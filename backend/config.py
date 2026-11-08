@@ -32,7 +32,7 @@ LEGACY_UPDATE_URLS = {
 }
 
 DEFAULT_CONFIG = {
-    "version": "1.0.28",
+    "version": "1.0.29",
     "activeProvider": None,
     "gatewayApiKey": None,
     "providers": [],

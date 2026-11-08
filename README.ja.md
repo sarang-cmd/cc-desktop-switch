@@ -70,14 +70,14 @@ v1.0.18 以降、Claude Desktop は `127.0.0.1` のローカル Junction gateway
 https://github.com/sarang-cmd/junction/releases/latest
 ```
 
-公開中の最新リリース v1.0.27 では、互換性のため旧 `CC-Desktop-Switch` 名のアセットが使われています。次の Junction ビルドでは `Junction-v<version>` の名前になります。
+以下は v1.0.28 リリースのアセット名の例です。ファイル名は `Junction-v1.0.28` 形式です。
 
 推奨ファイル：
 
-- `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`：Windows installer
-- `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`：Windows portable package
-- `CC-Desktop-Switch-v1.0.27-macOS-arm64.pkg`：macOS installer
-- `CC-Desktop-Switch-v1.0.27-macOS-arm64.dmg`：macOS drag-and-drop package
+- `Junction-v1.0.28-Windows-Setup.exe`：Windows installer
+- `Junction-v1.0.28-Windows-Portable.zip`：Windows portable package
+- `Junction-v1.0.28-macOS-arm64.pkg`：macOS installer
+- `Junction-v1.0.28-macOS-arm64.dmg`：macOS drag-and-drop package
 
 Windows build にはまだ Authenticode code signing certificate がありません。そのため、Windows が unknown publisher warning を表示する場合があります。Release assets には `.sha256`、`.sig`、public key が含まれています。
 
