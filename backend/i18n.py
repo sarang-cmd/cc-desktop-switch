@@ -322,6 +322,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "registry.clear_failed_short": "clear failed",
         "registry.macos_partial_clear_failed": "macOS configuration partially failed to clear: {errors}",
         "registry.win_mac_only": "Desktop configuration is only required on Windows and macOS",
+        "registry.policy_unmarked_value": "Claude will stay locked by {path}; Junction cannot remove this value without its ccds_managed=true marker.",
+        "registry.policy_legacy_remained": "Claude will stay locked by {path}; this marked legacy Junction value could not be removed.",
+        "registry.policy_unknown_value": "Claude will stay locked by unrecognized policy {path}; remove it manually if it is not required.",
+        "registry.policy_hklm_value": "Claude will stay locked by {path}; HKLM policy values require an administrator to remove.",
+        "registry.policy_read_error": "Could not read policy key {path}: {error}",
 
         # Auto-Updater
         "update.invalid_url_scheme": "Update URL must be an http or https URL",
@@ -722,6 +727,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "registry.clear_failed_short": "清除失败",
         "registry.macos_partial_clear_failed": "macOS 配置部分清除失败: {errors}",
         "registry.win_mac_only": "仅 Windows / macOS 需要配置",
+        "registry.policy_unmarked_value": "Claude 将继续处于组织管理锁定状态，原因是 {path}；没有 ccds_managed=true 标记时，Junction 不会删除此值。",
+        "registry.policy_legacy_remained": "Claude 将继续处于组织管理锁定状态，原因是 {path}；此 Junction 旧策略值未能删除。",
+        "registry.policy_unknown_value": "Claude 将继续处于组织管理锁定状态，原因是未知策略 {path}；如不需要，请手动删除。",
+        "registry.policy_hklm_value": "Claude 将继续处于组织管理锁定状态，原因是 {path}；HKLM 策略值需要管理员删除。",
+        "registry.policy_read_error": "无法读取策略键 {path}: {error}",
 
         # 自动更新
         "update.invalid_url_scheme": "更新地址必须是 http 或 https URL",

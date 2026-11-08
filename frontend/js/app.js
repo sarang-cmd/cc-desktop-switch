@@ -1610,6 +1610,7 @@
     $("#settingsProxyPort").value = settings.proxyPort;
     $("#settingsAdminPort").value = settings.adminPort;
     $("#autoStart").checked = settings.autoStart;
+    $("#settingsChatTabEnabled").checked = settings.chatTabEnabled !== false;
     $("#exposeAllProviderModels").checked = !!settings.exposeAllProviderModels;
     $("#settingsUpdateUrl").value = settings.updateUrl || "";
     $("#settingsUpstreamProxy").value = settings.upstreamProxy || "";
@@ -1679,6 +1680,7 @@
       proxyPort: Number($("#settingsProxyPort").value),
       adminPort: Number($("#settingsAdminPort").value),
       autoStart: $("#autoStart").checked,
+      chatTabEnabled: $("#settingsChatTabEnabled").checked,
       exposeAllProviderModels: $("#exposeAllProviderModels")?.checked || false,
       updateUrl: $("#settingsUpdateUrl").value.trim(),
       upstreamProxy: $("#settingsUpstreamProxy").value.trim(),
@@ -2567,6 +2569,7 @@
     $("#settingsUpstreamProxy").addEventListener("change", saveSettingsFromForm);
     $("#settingsBillingHeaderRectifier").addEventListener("change", saveSettingsFromForm);
     $("#autoStart").addEventListener("change", saveSettingsFromForm);
+    $("#settingsChatTabEnabled").addEventListener("change", saveSettingsFromForm);
     $("#exposeAllProviderModels").addEventListener("change", saveSettingsFromForm);
     $("#configImportFile")?.addEventListener("change", (event) => {
       importConfigFile(event.target.files?.[0]);

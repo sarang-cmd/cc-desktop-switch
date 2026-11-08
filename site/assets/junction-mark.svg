@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Junction</title>
+  <path d="M32 30V14M29 34 16 46M35 34l13 12" stroke="#191b20" stroke-width="6" stroke-linecap="square"/>
+  <circle cx="32" cy="12" r="8" fill="#f4dc60" stroke="#191b20" stroke-width="4"/>
+  <circle cx="14" cy="49" r="8" fill="#b8e879" stroke="#191b20" stroke-width="4"/>
+  <circle cx="50" cy="49" r="8" fill="#2854e8" stroke="#191b20" stroke-width="4"/>
+  <circle cx="32" cy="32" r="9" fill="#fffdf7" stroke="#191b20" stroke-width="4"/>
+</svg>

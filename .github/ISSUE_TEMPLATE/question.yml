@@ -22,10 +22,10 @@ body:
     validations:
       required: true
   - type: input
-    id: ccds_version
+    id: junction_version
     attributes:
-      label: CC Desktop Switch version
-      placeholder: v1.0.20
+      label: Junction version
+      placeholder: v1.0.27
     validations:
       required: true
   - type: input

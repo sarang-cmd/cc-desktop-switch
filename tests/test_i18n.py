@@ -56,6 +56,19 @@ class BackendLocalizationTests(unittest.TestCase):
         self.assertEqual(english - chinese, set())
         self.assertEqual(chinese - english, set())
 
+    def test_policy_lock_messages_format_the_exact_path_in_both_languages(self):
+        for key in (
+            "registry.policy_unmarked_value",
+            "registry.policy_legacy_remained",
+            "registry.policy_unknown_value",
+            "registry.policy_hklm_value",
+        ):
+            for lang in ("en", "zh"):
+                path = r"HKLM\SOFTWARE\Policies\Claude\Example"
+                message = i18n.t(key, lang=lang, path=path)
+                self.assertIn(path, message)
+                self.assertNotIn("{path}", message)
+
     def test_every_builtin_preset_has_bilingual_names_and_hints(self):
         for preset in cfg.get_presets():
             preset_id = preset["id"]
@@ -139,7 +152,7 @@ console.log(JSON.stringify({ stored, restored: window.CCI18n.language }));
         self.assertIn('function syncPatchboardRow(input)', app)
         self.assertIn('data-patch-state', app)
         self.assertIn('.patchboard-row.is-patched .patch-wire-line', css)
-        self.assertIn('@media (max-width: 860px)', css)
+        self.assertIn('@media (max-width: 920px)', css)
 
 
 class LocalizationScriptTests(unittest.TestCase):

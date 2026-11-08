@@ -55,6 +55,20 @@ class ReleaseVersionSyncTests(unittest.TestCase):
         custom = cfg.normalize_config({"settings": {"updateUrl": custom_url}})
         self.assertEqual(custom["settings"]["updateUrl"], custom_url)
 
+    def test_release_packaging_and_site_downloads_use_junction_assets(self):
+        release_script = (ROOT / "scripts" / "New-Release.ps1").read_text(encoding="utf-8")
+        manifest_script = (ROOT / "scripts" / "New-ReleaseManifest.ps1").read_text(encoding="utf-8")
+        site_script = (ROOT / "site" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('"Junction-v$Version-Windows-Setup.exe"', release_script)
+        self.assertIn('"Junction-v$Version-Windows-Portable.zip"', release_script)
+        self.assertIn('"Junction-v$Version-macOS-$Arch.$extension"', release_script)
+        self.assertIn('"Junction-v$Version-Windows-Setup.exe"', manifest_script)
+        self.assertIn('"windows-installer": /windows.*(?:setup|installer).*\\.exe$/i', site_script)
+        self.assertIn('"mac-arm-pkg": /macos-arm64\\.pkg$/i', site_script)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("currently published v1.0.27 assets", readme)
+        self.assertIn('[string]$Version = "1.0.28"', release_script)
+
     def test_installer_syntax_workflow_uses_the_rebranded_payload_directory(self):
         workflow = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
         installer = (ROOT / "installer.nsi").read_text(encoding="utf-8")

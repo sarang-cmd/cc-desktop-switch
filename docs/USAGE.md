@@ -116,7 +116,7 @@ Claude 桌面版 -> Junction 本机转发 -> 你的 API 提供商
 
 ### 是否还需要手动 Enable Developer Mode？
 
-正常情况下不需要。本工具会直接写入 Claude Desktop 支持的 managed policy。你只需要重启 Claude Desktop。
+正常情况下不需要。Junction 会把连接保存到 Claude Desktop 的 `configLibrary`，并只切换 `deploymentMode`。应用配置后，完整重启 Claude Desktop。
 
 但前提是你安装的 Claude Desktop 版本支持第三方推理配置。
 

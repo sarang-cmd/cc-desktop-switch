@@ -31,6 +31,7 @@ macos-packaging-plan.md
 
 # Local-only project materials and generated review screenshots.
 agent/
+codex_history/
 prompt-codex.md
 image/
 ccds-*.png

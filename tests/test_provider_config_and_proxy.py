@@ -563,21 +563,6 @@ class ProviderConfigTests(unittest.TestCase):
         self.assertNotIn({"name": "deepseek-v4-pro[1m]", "displayName": "deepseek-v4-pro[1m]"}, models)
         self.assertFalse(any(item.get("name") == "deepseek/claude-opus-4-6" for item in models))
 
-    def test_windows_registry_apply_falls_back_to_elevated_helper_when_key_is_not_writable(self):
-        if not hasattr(registry, "_win_apply_config"):
-            self.skipTest("Windows registry helper is unavailable")
-
-        with patch("backend.registry._win_get_key", return_value=None):
-            with patch("backend.registry._win_apply_config_elevated", return_value={"success": True}) as elevated:
-                result = registry._win_apply_config(
-                    "http://127.0.0.1:18080",
-                    "gateway-key",
-                    '[{"name":"deepseek-v4-pro[1m]","supports1m":true}]',
-                )
-
-        self.assertTrue(result["success"])
-        elevated.assert_called_once()
-
     def test_macos_apply_config_reports_defaults_write_failure(self):
         def fake_mac_run(args):
             if args[:4] == ["defaults", "write", registry.MAC_BUNDLE, "inferenceGatewayBaseUrl"]:
@@ -654,17 +639,14 @@ class ProviderConfigTests(unittest.TestCase):
             saved = json.load(handle)
         self.assertEqual(saved["deploymentMode"], "3p")
         self.assertEqual(saved["preferences"], {"sidebarMode": "task"})
-        self.assertEqual(saved["enterpriseConfig"]["inferenceProvider"], "gateway")
-        self.assertEqual(saved["enterpriseConfig"]["inferenceGatewayBaseUrl"], "http://127.0.0.1:18080")
-        self.assertEqual(saved["enterpriseConfig"]["inferenceGatewayApiKey"], "secret-value")
-        self.assertEqual(saved["enterpriseConfig"]["inferenceGatewayAuthScheme"], "x-api-key")
-        self.assertEqual(saved["enterpriseConfig"]["inferenceGatewayHeaders"], ["x-api-key: secret-value"])
-        self.assertEqual(saved["enterpriseConfig"]["inferenceModels"], [
-            {"name": "model-a", "displayName": "Model A"},
-            {"name": "model-b", "supports1m": True},
-        ])
-        self.assertIs(saved["enterpriseConfig"]["isClaudeCodeForDesktopEnabled"], True)
-        self.assertEqual(saved["enterpriseConfig"]["coworkEgressAllowedHosts"], ["*"])
+        self.assertEqual(saved["enterpriseConfig"], {
+            "inferenceProvider": "gateway",
+            "inferenceGatewayBaseUrl": "https://old.example",
+        })
+        self.assertEqual(saved.keys(), {"deploymentMode", "enterpriseConfig", "preferences"})
+        with open(json_path + ".junction.bak", encoding="utf-8") as handle:
+            backup = json.load(handle)
+        self.assertEqual(backup["deploymentMode"], "1p")
 
     def test_macos_apply_config_writes_active_config_library_entry(self):
         json_path = os.path.join(self.temp_dir.name, "Claude-3p", "claude_desktop_config.json")
@@ -675,7 +657,7 @@ class ProviderConfigTests(unittest.TestCase):
         with open(os.path.join(library_dir, "_meta.json"), "w", encoding="utf-8") as handle:
             json.dump({
                 "appliedId": entry_id,
-                "entries": [{"id": entry_id, "name": "Default"}],
+                "entries": [{"id": entry_id, "name": "Claude Code Router"}],
             }, handle)
         with open(entry_path, "w", encoding="utf-8") as handle:
             json.dump({
@@ -697,20 +679,24 @@ class ProviderConfigTests(unittest.TestCase):
         self.assertTrue(result["success"])
         with open(entry_path, encoding="utf-8") as handle:
             saved = json.load(handle)
-        self.assertEqual(saved["note"], "keep me")
-        self.assertEqual(saved["inferenceProvider"], "gateway")
-        self.assertEqual(saved["inferenceGatewayBaseUrl"], "http://127.0.0.1:18080")
-        self.assertEqual(saved["inferenceGatewayApiKey"], "secret-value")
-        self.assertEqual(saved["inferenceGatewayAuthScheme"], "x-api-key")
-        self.assertEqual(saved["inferenceGatewayHeaders"], ["x-api-key: secret-value"])
-        self.assertEqual(saved["inferenceModels"], [
-            {"name": "model-a", "displayName": "Model A"},
-            {"name": "model-b", "supports1m": True},
+        self.assertEqual(saved, {
+            "inferenceProvider": "gateway",
+            "inferenceGatewayBaseUrl": "https://old.example",
+            "note": "keep me",
+        })
+        with open(os.path.join(library_dir, "_meta.json"), encoding="utf-8") as handle:
+            meta = json.load(handle)
+        self.assertEqual(meta["appliedId"], cfg.get_settings()[registry.JUNCTION_LIBRARY_ENTRY_SETTING])
+        junction_id = meta["appliedId"]
+        with open(os.path.join(library_dir, f"{junction_id}.json"), encoding="utf-8") as handle:
+            junction = json.load(handle)
+        self.assertEqual(junction["inferenceGatewayApiKey"], "secret-value")
+        self.assertEqual(junction["inferenceModels"], [
+            {"name": "model-a", "labelOverride": "Model A"},
+            {"name": "model-b"},
         ])
-        self.assertIs(saved["isClaudeCodeForDesktopEnabled"], True)
-        self.assertEqual(saved["coworkEgressAllowedHosts"], ["*"])
 
-    def test_macos_status_prefers_json_runtime_values_over_stale_plist_models(self):
+    def test_macos_status_ignores_legacy_json_enterprise_values(self):
         json_path = os.path.join(self.temp_dir.name, "Claude-3p", "claude_desktop_config.json")
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
         with open(json_path, "w", encoding="utf-8") as handle:
@@ -739,11 +725,11 @@ class ProviderConfigTests(unittest.TestCase):
                 status = registry._mac_get_config_status()
 
         self.assertTrue(status["configured"])
-        self.assertEqual(status["keys"]["inferenceGatewayBaseUrl"], "https://stale.example")
+        self.assertEqual(status["keys"]["inferenceGatewayBaseUrl"], "http://127.0.0.1:18080")
         self.assertEqual(status["keys"]["inferenceGatewayApiKey"], "******")
-        self.assertEqual(status["keys"]["inferenceModels"], '[{"name":"json-model","supports1m":true}]')
-        self.assertEqual(status["activeSource"], "json")
-        self.assertEqual(status["keySources"]["inferenceModels"], "json")
+        self.assertEqual(status["keys"]["inferenceModels"], plist_models)
+        self.assertEqual(status["activeSource"], "plist")
+        self.assertEqual(status["keySources"]["inferenceModels"], "plist")
         self.assertTrue(status["sources"]["plist"])
         self.assertTrue(status["sources"]["json"])
         self.assertFalse(status["sources"]["configLibrary"])
@@ -766,7 +752,7 @@ class ProviderConfigTests(unittest.TestCase):
         with open(os.path.join(library_dir, "_meta.json"), "w", encoding="utf-8") as handle:
             json.dump({
                 "appliedId": entry_id,
-                "entries": [{"id": entry_id, "name": "Default"}],
+                "entries": [{"id": entry_id, "name": "Junction"}],
             }, handle)
         with open(os.path.join(library_dir, f"{entry_id}.json"), "w", encoding="utf-8") as handle:
             json.dump({
@@ -799,7 +785,7 @@ class ProviderConfigTests(unittest.TestCase):
         self.assertTrue(status["sources"]["json"])
         self.assertTrue(status["sources"]["configLibrary"])
 
-    def test_macos_json_1m_status_does_not_warn_when_plist_models_are_stale(self):
+    def test_macos_legacy_json_is_not_treated_as_active_1m_configuration(self):
         provider = {
             "baseUrl": "https://api.deepseek.com/anthropic",
             "authScheme": "bearer",
@@ -848,13 +834,13 @@ class ProviderConfigTests(unittest.TestCase):
         health = _desktop_health(status, 18080, provider)
         codes = {issue["code"] for issue in health["issues"]}
 
-        self.assertEqual(status["activeSource"], "json")
-        self.assertEqual(status["keySources"]["inferenceModels"], "json")
-        self.assertFalse(health["needsApply"])
-        self.assertTrue(health["oneMillionReady"])
-        self.assertNotIn("one_million_not_written", codes)
+        self.assertEqual(status["activeSource"], "plist")
+        self.assertEqual(status["keySources"]["inferenceModels"], "plist")
+        self.assertTrue(health["needsApply"])
+        self.assertFalse(health["oneMillionReady"])
+        self.assertIn("one_million_not_written", codes)
 
-    def test_macos_config_library_1m_status_does_not_warn_when_other_sources_are_stale(self):
+    def test_macos_config_library_1m_capability_is_reported_as_unverified(self):
         provider = {
             "baseUrl": "https://api.deepseek.com/anthropic",
             "authScheme": "bearer",
@@ -886,14 +872,19 @@ class ProviderConfigTests(unittest.TestCase):
                 },
             }, handle)
         with open(os.path.join(library_dir, "_meta.json"), "w", encoding="utf-8") as handle:
-            json.dump({"appliedId": entry_id}, handle)
+            json.dump({
+                "appliedId": entry_id,
+                "entries": [{"id": entry_id, "name": "Junction"}],
+            }, handle)
         with open(os.path.join(library_dir, f"{entry_id}.json"), "w", encoding="utf-8") as handle:
             json.dump({
                 "inferenceProvider": "gateway",
                 "inferenceGatewayBaseUrl": "http://127.0.0.1:18080",
                 "inferenceGatewayApiKey": "library-secret",
                 "inferenceGatewayAuthScheme": "bearer",
-                "inferenceModels": json.loads(registry.serialize_inference_models(provider)),
+                "inferenceModels": registry._native_inference_models(
+                    registry.serialize_inference_models(provider)
+                ),
                 "coworkEgressAllowedHosts": ["*"],
             }, handle)
 
@@ -917,11 +908,11 @@ class ProviderConfigTests(unittest.TestCase):
 
         self.assertEqual(status["activeSource"], "configLibrary")
         self.assertEqual(status["keySources"]["inferenceModels"], "configLibrary")
-        self.assertFalse(health["needsApply"])
-        self.assertTrue(health["oneMillionReady"])
-        self.assertNotIn("one_million_not_written", codes)
+        self.assertTrue(health["needsApply"])
+        self.assertFalse(health["oneMillionReady"])
+        self.assertIn("one_million_not_written", codes)
 
-    def test_macos_clear_config_clears_json_without_touching_preferences(self):
+    def test_macos_clear_without_junction_entry_preserves_json_config(self):
         json_path = os.path.join(self.temp_dir.name, "Claude-3p", "claude_desktop_config.json")
         os.makedirs(os.path.dirname(json_path), exist_ok=True)
         with open(json_path, "w", encoding="utf-8") as handle:
@@ -943,8 +934,12 @@ class ProviderConfigTests(unittest.TestCase):
         plist_clear.assert_called_once()
         with open(json_path, encoding="utf-8") as handle:
             saved = json.load(handle)
-        self.assertEqual(saved["deploymentMode"], "clear")
-        self.assertNotIn("enterpriseConfig", saved)
+        self.assertEqual(saved["deploymentMode"], "3p")
+        self.assertEqual(saved["enterpriseConfig"], {
+            "inferenceProvider": "gateway",
+            "inferenceGatewayBaseUrl": "http://127.0.0.1:18080",
+            "inferenceGatewayApiKey": "secret-value",
+        })
         self.assertEqual(saved["preferences"], {"sidebarMode": "task"})
 
     def test_macos_clear_config_clears_active_config_library_entry(self):
@@ -961,7 +956,7 @@ class ProviderConfigTests(unittest.TestCase):
         with open(os.path.join(library_dir, "_meta.json"), "w", encoding="utf-8") as handle:
             json.dump({
                 "appliedId": entry_id,
-                "entries": [{"id": entry_id, "name": "Default"}],
+                "entries": [{"id": entry_id, "name": "Junction"}],
             }, handle)
         with open(entry_path, "w", encoding="utf-8") as handle:
             json.dump({
@@ -980,9 +975,10 @@ class ProviderConfigTests(unittest.TestCase):
                 result = registry._mac_clear_config()
 
         self.assertTrue(result["success"])
-        with open(entry_path, encoding="utf-8") as handle:
-            saved = json.load(handle)
-        self.assertEqual(saved, {"note": "keep me"})
+        self.assertFalse(os.path.exists(entry_path))
+        with open(os.path.join(library_dir, "_meta.json"), encoding="utf-8") as handle:
+            saved_meta = json.load(handle)
+        self.assertEqual(saved_meta["entries"], [])
 
     def test_macos_apply_config_entrypoint_forwards_auth_scheme_and_headers(self):
         with patch("backend.registry._os_name", return_value="mac"):
@@ -1002,50 +998,8 @@ class ProviderConfigTests(unittest.TestCase):
             '["model-a"]',
             "x-api-key",
             '["x-api-key: provider-key"]',
+            True,
         )
-
-    def test_elevated_registry_script_does_not_contain_plain_gateway_key(self):
-        captured = {}
-
-        def fake_run(script):
-            captured["script"] = script
-            return True, ""
-
-        with patch("backend.registry._current_user_sid", return_value="S-1-5-21-test"):
-            with patch("backend.registry._run_elevated_powershell", fake_run):
-                result = registry._win_apply_config_elevated(
-                    "http://127.0.0.1:18080",
-                    "plain-gateway-key",
-                    '[{"name":"deepseek-v4-pro[1m]","supports1m":true}]',
-                    gateway_headers='["x-api-key: plain-gateway-key"]',
-                )
-
-        self.assertTrue(result["success"])
-        self.assertNotIn("plain-gateway-key", captured["script"])
-        self.assertIn("coworkEgressAllowedHosts", captured["script"])
-        self.assertIn("FromBase64String", captured["script"])
-        self.assertNotIn(r"HKCU:\SOFTWARE\Policies\Claude", captured["script"])
-
-    def test_elevated_registry_script_targets_current_user_hive(self):
-        captured = {}
-
-        def fake_run(script):
-            captured["script"] = script
-            return True, ""
-
-        with patch("backend.registry._run_elevated_powershell", fake_run):
-            with patch("backend.registry._current_user_sid", return_value="S-1-5-21-1001"):
-                result = registry._win_apply_config_elevated(
-                    "http://127.0.0.1:18080",
-                    "gateway-key",
-                    '[{"name":"deepseek-v4-pro[1m]","supports1m":true}]',
-                )
-
-        self.assertTrue(result["success"])
-        expected_path = registry._b64_utf8(
-            r"Registry::HKEY_USERS\S-1-5-21-1001\SOFTWARE\Policies\Claude"
-        )
-        self.assertIn(expected_path, captured["script"])
 
     def test_managed_policy_names_include_code_desktop_flag(self):
         names = [
@@ -4452,6 +4406,19 @@ class StaticFrontendTests(unittest.TestCase):
         self.assertIn('data-i18n="guide.step3Text"', html)
         self.assertNotIn("proxy console", (html + i18n).lower())
 
+    def test_chat_tab_setting_is_visible_persisted_and_passed_to_desktop_apply(self):
+        html = (self.root / "frontend" / "index.html").read_text(encoding="utf-8")
+        app_js = (self.root / "frontend" / "js" / "app.js").read_text(encoding="utf-8")
+        config_py = (self.root / "backend" / "config.py").read_text(encoding="utf-8")
+        main_py = (self.root / "backend" / "main.py").read_text(encoding="utf-8")
+        registry_py = (self.root / "backend" / "registry.py").read_text(encoding="utf-8")
+        self.assertIn('id="settingsChatTabEnabled"', html)
+        self.assertIn('settings.chatTab', html)
+        self.assertIn('chatTabEnabled: $("#settingsChatTabEnabled").checked', app_js)
+        self.assertIn('"chatTabEnabled": True', config_py)
+        self.assertIn('chat_tab_enabled=settings.get("chatTabEnabled", True)', main_py)
+        self.assertIn('"chatTabEnabled": bool(chat_tab_enabled)', registry_py)
+
     def test_dashboard_presets_selection_update_and_desktop_health_ui_exist(self):
         html = (self.root / "frontend" / "index.html").read_text(encoding="utf-8")
         css = (self.root / "frontend" / "css" / "style.css").read_text(encoding="utf-8")
@@ -4610,7 +4577,7 @@ class StaticFrontendTests(unittest.TestCase):
 
         self.assertIn('class="advanced-provider-options" open', html)
         self.assertIn('compat-chevron', html + css)
-        self.assertIn("border: 2px solid #ef4444", css)
+        self.assertIn(".compatibility-item.experimental { border-left: 4px solid var(--warning); }", css)
         self.assertIn('data-api-format="anthropic"', html)
         self.assertIn('data-api-format="openai_chat"', html)
         self.assertIn('data-action="check-provider-compatibility"', html)

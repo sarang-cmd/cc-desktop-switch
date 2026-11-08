@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible CC Desktop Switch or Claude Desktop integration bug.
+description: Report a reproducible Junction or Claude Desktop integration bug.
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -24,11 +24,11 @@ body:
     validations:
       required: true
   - type: input
-    id: ccds_version
+    id: junction_version
     attributes:
-      label: CC Desktop Switch version
+      label: Junction version
       description: Copy the exact release version or commit.
-      placeholder: v1.0.20
+      placeholder: v1.0.27
     validations:
       required: true
   - type: input
@@ -43,7 +43,7 @@ body:
     id: api_format
     attributes:
       label: API format
-      description: Choose the format configured in CC Desktop Switch.
+      description: Choose the format configured in Junction.
       options:
         - Anthropic-compatible
         - OpenAI Chat
@@ -89,7 +89,7 @@ body:
     id: screenshots
     attributes:
       label: Screenshots
-      description: Attach screenshots of the provider settings, Claude Desktop error, and CC Desktop Switch status. Redact secrets.
+      description: Attach screenshots of the provider settings, Claude Desktop error, and Junction status. Redact secrets.
       placeholder: Drag screenshots here.
     validations:
       required: true

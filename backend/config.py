@@ -42,6 +42,7 @@ DEFAULT_CONFIG = {
         "proxyPort": 18080,
         "adminPort": 18081,
         "autoStart": False,
+        "chatTabEnabled": True,
         "exposeAllProviderModels": False,
         "updateUrl": DEFAULT_UPDATE_URL,
         "upstreamProxy": "",
