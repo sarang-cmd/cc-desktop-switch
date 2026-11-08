@@ -1842,7 +1842,7 @@
 
   function diagnosticsFilename() {
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-    return `cc-desktop-switch-diagnostics-${stamp}.json`;
+    return `junction-diagnostics-${stamp}.json`;
   }
 
   async function refreshCcSwitchImportStatus() {
@@ -2383,7 +2383,7 @@
       if (action === "export-config") {
         const data = await CCApi.exportConfig();
         const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-        downloadJson(`cc-desktop-switch-config-${stamp}.json`, data);
+        downloadJson(`junction-config-${stamp}.json`, data);
         showToast(t("toast.configExported"));
       }
 

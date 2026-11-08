@@ -15,6 +15,7 @@ from backend.preset_loader import load_builtin_presets
 
 def _resolve_config_paths() -> tuple[str, str, str]:
     override = os.environ.get("CCDS_CONFIG_DIR", "").strip()
+    # Keep the pre-rebrand data directory stable so existing provider keys and settings are reused.
     config_dir = os.path.abspath(os.path.expanduser(override or "~/.cc-desktop-switch"))
     return (
         config_dir,
@@ -24,10 +25,14 @@ def _resolve_config_paths() -> tuple[str, str, str]:
 
 
 CONFIG_DIR, CONFIG_FILE, BACKUP_DIR = _resolve_config_paths()
-DEFAULT_UPDATE_URL = "https://github.com/lonr-6/cc-desktop-switch/releases/latest/download/latest.json"
+DEFAULT_UPDATE_URL = "https://github.com/sarang-cmd/junction/releases/latest/download/latest.json"
+LEGACY_UPDATE_URLS = {
+    "https://github.com/lonr-6/cc-desktop-switch/releases/latest/download/latest.json",
+    "https://github.com/sarang-cmd/cc-desktop-switch/releases/latest/download/latest.json",
+}
 
 DEFAULT_CONFIG = {
-    "version": "1.0.27",
+    "version": "1.0.28",
     "activeProvider": None,
     "gatewayApiKey": None,
     "providers": [],
@@ -143,6 +148,9 @@ def normalize_config(config: dict) -> dict:
     imported_settings = source.get("settings", {})
     if isinstance(imported_settings, dict):
         settings.update(imported_settings)
+    # Migrate known pre-rebrand project feeds while leaving custom user feeds untouched.
+    if str(settings.get("updateUrl") or "").strip() in LEGACY_UPDATE_URLS:
+        settings["updateUrl"] = DEFAULT_UPDATE_URL
     normalized["settings"] = settings
 
     providers = source.get("providers", [])

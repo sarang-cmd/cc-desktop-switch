@@ -5,7 +5,7 @@ from typing import Any, Optional
 TRANSLATIONS: dict[str, dict[str, str]] = {
     "en": {
         # General
-        "app_name": "CC Desktop Switch",
+        "app_name": "Junction",
         "save": "Save",
         "cancel": "Cancel",
         "confirm": "Confirm",
@@ -151,7 +151,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "toast_settings_saved": "Settings saved",
 
         # Tray & Single-Instance Startup
-        "tray.open": "Open CC Desktop Switch",
+        "tray.open": "Open Junction",
         "tray.quit": "Quit",
         "tray.no_providers": "No providers configured",
         "tray.switch_provider": "Switch Provider",
@@ -164,10 +164,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "tray.restart_pending_detail": "If Claude Desktop is already configured with this tool, the new models will take effect on next launch.",
         "tray.restart_body": "Switched to: {name}\n\n{detail}\nPlease completely quit and reopen Claude Desktop before using the new models.",
         "tray.minimized_notify": "App is still running in the background. Right-click the tray icon to open or quit.",
-        "single_instance.activating": "CC Desktop Switch is already running. Attempting to bring the existing window to the front...",
+        "single_instance.activating": "Junction is already running. Attempting to bring the existing window to the front...",
         "single_instance.activated": "Activated existing instance; check your taskbar or system tray.",
         "single_instance.activate_failed": "Could not activate existing instance; please open the window from the taskbar or system tray.",
-        "single_instance.already_running_box": "CC Desktop Switch is already running.\n\nPlease open the existing window from the taskbar or system tray.",
+        "single_instance.already_running_box": "Junction is already running.\n\nPlease open the existing window from the taskbar or system tray.",
         "startup.auto_proxy": "  Auto-starting forwarding service (port {port})...",
         "startup.admin_panel": "Admin Console",
         "startup.press_ctrl_c": "Press Ctrl+C to stop",
@@ -252,7 +252,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "provider_tools.detect_failed": "Could not detect protocol format automatically; please select manually",
 
         # Proxy Gateway
-        "proxy.unmapped_model_error": "Model {model} is not mapped in CC Desktop Switch. Please select a mapped model in Claude Desktop or re-apply the desktop configuration.",
+        "proxy.unmapped_model_error": "Model {model} is not mapped in Junction. Please select a mapped model in Claude Desktop or re-apply the desktop configuration.",
         "proxy.non_json_error": "Upstream API returned a non-JSON response. This usually indicates an HTML/text error page, authentication failure page, path mismatch, or an endpoint incompatible with the selected API format.",
         "proxy.log_non_json_prefix": "Upstream returned non-JSON: ",
         "proxy.socks_missing_error": "Upstream proxy uses a SOCKS address, but SOCKS proxy support is missing in this build. Please upgrade to a build with SOCKS support, switch to an HTTP proxy, or disable Upstream Proxy.",
@@ -399,13 +399,13 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.download_installer_failed": "Failed to download installer",
         "admin.install_quit_starting": "Update downloaded. The application will now quit and launch the installer.",
         "admin.install_macos_opened": "Update package downloaded and opened. Please quit the current application and follow the macOS prompts to finish installation.",
-        "admin.install_windows_started": "Installer downloaded and launched. The installer will reuse your previous installation directory and close any running CC Desktop Switch instance.",
+        "admin.install_windows_started": "Installer downloaded and launched. The installer will reuse your previous installation directory and close any running Junction instance.",
         "admin.install_opened": "Update package downloaded and opened.",
         "admin.install_launch_failed": "Failed to launch installer: {error}",
     },
     "zh": {
         # 通用
-        "app_name": "CC Desktop Switch",
+        "app_name": "Junction",
         "save": "保存",
         "cancel": "取消",
         "confirm": "确认",
@@ -551,7 +551,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "toast_settings_saved": "设置已保存",
 
         # 托盘与单实例启动
-        "tray.open": "打开 CC Desktop Switch",
+        "tray.open": "打开 Junction",
         "tray.quit": "退出",
         "tray.no_providers": "暂无提供商",
         "tray.switch_provider": "切换提供商",
@@ -564,10 +564,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "tray.restart_pending_detail": "如果 Claude 桌面版已经配置过本工具，模型会在下次启动后生效。",
         "tray.restart_body": "已切换到：{name}\n\n{detail}\n请完全退出并重新打开 Claude 桌面版，然后再使用新模型。",
         "tray.minimized_notify": "程序仍在后台运行。右键托盘图标可打开或退出。",
-        "single_instance.activating": "CC Desktop Switch 已经在运行，正在尝试唤起现有窗口...",
+        "single_instance.activating": "Junction 已经在运行，正在尝试唤起现有窗口...",
         "single_instance.activated": "已唤起现有实例；请查看任务栏或系统托盘。",
         "single_instance.activate_failed": "未能唤起现有实例；请从任务栏或系统托盘打开已有窗口。",
-        "single_instance.already_running_box": "CC Desktop Switch 已经在运行。\n\n请从任务栏或系统托盘打开已有窗口。",
+        "single_instance.already_running_box": "Junction 已经在运行。\n\n请从任务栏或系统托盘打开已有窗口。",
         "startup.auto_proxy": "  自动启动代理 (端口 {port})...",
         "startup.admin_panel": "管理后台",
         "startup.press_ctrl_c": "按 Ctrl+C 停止",
@@ -652,7 +652,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "provider_tools.detect_failed": "未能识别协议类型，请手动选择",
 
         # 代理网关
-        "proxy.unmapped_model_error": "模型 {model} 未在 CC Desktop Switch 中映射，请在 Claude Desktop 里选择已映射模型，或重新一键应用配置。",
+        "proxy.unmapped_model_error": "模型 {model} 未在 Junction 中映射，请在 Claude Desktop 里选择已映射模型，或重新一键应用配置。",
         "proxy.non_json_error": "上游 API 返回了非 JSON 响应。这通常表示中转返回了 HTML/文本错误页、鉴权失败页、路径不匹配，或该中转并不完全兼容当前选择的 API 格式。",
         "proxy.log_non_json_prefix": "上游返回非 JSON：",
         "proxy.socks_missing_error": "当前上游代理使用了 SOCKS 地址，但安装包缺少 SOCKS 代理依赖。请升级到包含 SOCKS 支持的版本；临时解决办法是改用 HTTP 代理，或关闭“上游代理”。",
@@ -799,7 +799,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "admin.download_installer_failed": "下载安装包失败",
         "admin.install_quit_starting": "更新包已下载，应用即将退出并启动安装器。",
         "admin.install_macos_opened": "更新包已下载并打开。请先退出当前应用，再按 macOS 提示完成安装。",
-        "admin.install_windows_started": "安装包已下载并启动。安装器会沿用旧安装目录，并在安装前关闭正在运行的 CC Desktop Switch。",
+        "admin.install_windows_started": "安装包已下载并启动。安装器会沿用旧安装目录，并在安装前关闭正在运行的 Junction。",
         "admin.install_opened": "更新包已下载并打开。",
         "admin.install_launch_failed": "启动安装器失败: {error}",
     },

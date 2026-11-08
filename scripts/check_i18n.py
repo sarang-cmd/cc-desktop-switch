@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Localization contract checker for CC Desktop Switch.
+"""Localization contract checker for Junction.
 
 Usage:
     python scripts/check_i18n.py
@@ -197,7 +197,7 @@ def check_used_keys(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Check the CC Desktop Switch localization contract.")
+    parser = argparse.ArgumentParser(description="Check the Junction localization contract.")
     parser.add_argument("--verbose", action="store_true", help="print a summary of every check")
     args = parser.parse_args(argv)
 

@@ -18,8 +18,8 @@ PY
 }
 
 VERSION="${1:-${CCDS_VERSION:-$(detect_version)}}"
-APP_PATH="${2:-dist/mac/CC Desktop Switch.app}"
-OUTPUT_PKG="${3:-dist/mac/CC-Desktop-Switch-v${VERSION}-macOS.pkg}"
+APP_PATH="${2:-dist/mac/Junction.app}"
+OUTPUT_PKG="${3:-dist/mac/Junction-v${VERSION}-macOS.pkg}"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "App bundle not found: $APP_PATH" >&2

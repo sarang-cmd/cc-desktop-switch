@@ -65,6 +65,6 @@ jobs:
           sudo apt-get install -y nsis
       - name: Compile installer with a dummy payload
         run: |
-          mkdir -p dist/CC-Desktop-Switch
-          printf 'syntax-check' > dist/CC-Desktop-Switch/placeholder.txt
+          mkdir -p dist/Junction
+          printf 'syntax-check' > dist/Junction/placeholder.txt
           makensis -V2 installer.nsi

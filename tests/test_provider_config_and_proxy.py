@@ -2694,7 +2694,7 @@ class AdminApiTests(unittest.TestCase):
 
 
 class ReleaseManifestTests(unittest.TestCase):
-    VERSION = "1.0.25"
+    VERSION = "1.0.28"
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -2719,18 +2719,18 @@ class ReleaseManifestTests(unittest.TestCase):
 
     def _write_windows_assets(self):
         for name in (
-            f"CC-Desktop-Switch-v{self.VERSION}-Windows-x64.exe",
-            f"CC-Desktop-Switch-v{self.VERSION}-Windows-Portable.zip",
-            f"CC-Desktop-Switch-v{self.VERSION}-Windows-Setup.exe",
+            f"Junction-v{self.VERSION}-Windows-x64.exe",
+            f"Junction-v{self.VERSION}-Windows-Portable.zip",
+            f"Junction-v{self.VERSION}-Windows-Setup.exe",
         ):
             self._touch_asset(name)
 
     def _write_macos_assets(self):
         for name in (
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-arm64.pkg",
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-arm64.dmg",
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-x64.pkg",
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-x64.dmg",
+            f"Junction-v{self.VERSION}-macOS-arm64.pkg",
+            f"Junction-v{self.VERSION}-macOS-arm64.dmg",
+            f"Junction-v{self.VERSION}-macOS-x64.pkg",
+            f"Junction-v{self.VERSION}-macOS-x64.dmg",
         ):
             self._touch_asset(name)
 
@@ -2767,7 +2767,7 @@ class ReleaseManifestTests(unittest.TestCase):
                 "-StagingDir",
                 str(self.staging),
                 "-Repository",
-                "lonr-6/cc-desktop-switch",
+                "sarang-cmd/junction",
                 "-KeyDir",
                 str(self.key_dir),
             ],
@@ -2784,7 +2784,7 @@ class ReleaseManifestTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(
-            f"Required release asset missing: CC-Desktop-Switch-v{self.VERSION}-macOS-arm64.pkg",
+            f"Required release asset missing: Junction-v{self.VERSION}-macOS-arm64.pkg",
             result.stdout + result.stderr,
         )
 
@@ -2802,15 +2802,15 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertIn("macos-x64", latest["platforms"])
         self.assertTrue((self.staging / "latest.json.sha256").exists())
         self.assertTrue((self.staging / "latest.json.sig").exists())
-        self.assertTrue((self.staging / "CC-Desktop-Switch-release-public.pem").exists())
+        self.assertTrue((self.staging / "Junction-release-public.pem").exists())
         for asset in (
-            f"CC-Desktop-Switch-v{self.VERSION}-Windows-x64.exe",
-            f"CC-Desktop-Switch-v{self.VERSION}-Windows-Portable.zip",
-            f"CC-Desktop-Switch-v{self.VERSION}-Windows-Setup.exe",
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-arm64.pkg",
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-arm64.dmg",
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-x64.pkg",
-            f"CC-Desktop-Switch-v{self.VERSION}-macOS-x64.dmg",
+            f"Junction-v{self.VERSION}-Windows-x64.exe",
+            f"Junction-v{self.VERSION}-Windows-Portable.zip",
+            f"Junction-v{self.VERSION}-Windows-Setup.exe",
+            f"Junction-v{self.VERSION}-macOS-arm64.pkg",
+            f"Junction-v{self.VERSION}-macOS-arm64.dmg",
+            f"Junction-v{self.VERSION}-macOS-x64.pkg",
+            f"Junction-v{self.VERSION}-macOS-x64.dmg",
         ):
             self.assertTrue((self.staging / f"{asset}.sha256").exists(), asset)
             self.assertTrue((self.staging / f"{asset}.sig").exists(), asset)
@@ -4049,7 +4049,7 @@ class ProxyAppTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"]["type"], "invalid_request_error")
-        self.assertIn("is not mapped in CC Desktop Switch", response.json()["error"]["message"])
+        self.assertIn("is not mapped in Junction", response.json()["error"]["message"])
 
     def test_messages_endpoint_accepts_internal_dated_haiku_route_when_slot_is_mapped(self):
         cfg.add_provider({

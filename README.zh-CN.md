@@ -1,4 +1,4 @@
-# CC Desktop Switch
+# Junction
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -8,17 +8,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lonr-6/cc-desktop-switch/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/lonr-6/cc-desktop-switch?style=social"></a>
-  <a href="LICENSE.txt"><img alt="License" src="https://img.shields.io/github/license/lonr-6/cc-desktop-switch"></a>
+  <a href="https://github.com/sarang-cmd/junction/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/sarang-cmd/junction?style=social"></a>
+  <a href="LICENSE.txt"><img alt="License" src="https://img.shields.io/github/license/sarang-cmd/junction"></a>
   <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-blue?logo=python"></a>
-  <a href="https://github.com/lonr-6/cc-desktop-switch/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/lonr-6/cc-desktop-switch/total?label=downloads"></a>
+  <a href="https://github.com/sarang-cmd/junction/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sarang-cmd/junction/total?label=downloads"></a>
 </p>
 
-CC Desktop Switch 是一个面向 Claude Desktop 官方桌面客户端的轻量配置工具。它可以用桌面界面管理 DeepSeek、Kimi、智谱 GLM、阿里云百炼、小米 MiMo 等第三方 Anthropic 兼容 API 提供商，并一键写入 Claude Desktop 的第三方推理配置。
+产品网站：<https://sarang-cmd.github.io/junction/>
+
+Junction 是一个面向 Claude Desktop 官方桌面客户端的轻量配置工具。它可以用桌面界面管理 DeepSeek、Kimi、智谱 GLM、阿里云百炼、小米 MiMo 等第三方 Anthropic 兼容 API 提供商，并一键写入 Claude Desktop 的第三方推理配置。
 
 本项目主要面向 Windows 和 macOS 的 Claude Desktop 用户。它和偏 Claude Code / CLI 的 `farion1231/cc-switch` 不同，目标是让普通桌面用户更容易完成 provider 配置、模型映射、健康检查和本机 gateway 兼容。
 
-v1.0.18 起，Claude Desktop 默认会连接 CC Desktop Switch 的本机 gateway：`127.0.0.1`。使用第三方 provider 时，请保持 CC Desktop Switch 在后台运行。Windows 关闭窗口会缩到托盘；macOS 关闭窗口会隐藏应用并保持后台服务可用。
+v1.0.18 起，Claude Desktop 默认会连接 Junction 的本机 gateway：`127.0.0.1`。使用第三方 provider 时，请保持 Junction 在后台运行。Windows 关闭窗口会缩到托盘；macOS 关闭窗口会隐藏应用并保持后台服务可用。
 
 ## 界面预览
 
@@ -65,7 +67,7 @@ v1.0.18 起，Claude Desktop 默认会连接 CC Desktop Switch 的本机 gateway
 最新版本在 GitHub Releases：
 
 ```text
-https://github.com/lonr-6/cc-desktop-switch/releases/latest
+https://github.com/sarang-cmd/junction/releases/latest
 ```
 
 推荐下载：
@@ -79,7 +81,7 @@ Windows 版暂时没有 Authenticode 代码签名证书，系统可能提示未�
 
 ## 快速开始
 
-1. 下载并打开 CC Desktop Switch。
+1. 下载并打开 Junction。
 2. 选择一个 provider 预设，或添加自定义 provider。
 3. 填入自己的 API Key。
 4. 按需调整模型映射。
@@ -101,13 +103,13 @@ http://127.0.0.1:18081
 
 Claude Desktop 期望看到 Claude 系列模型名，但很多第三方 provider 使用 `deepseek-v4-pro`、`kimi-k2.6`、`glm-5.1`、`qwen3.6-plus` 这类真实上游模型 ID。
 
-CC Desktop Switch 会把真实模型 ID 保存在本机 gateway 内部，只向 Claude Desktop 暴露 Claude-safe route。v1.0.19 起，Claude Desktop 模型菜单只显示用户显式映射的 Claude 槽位；`Default` 只作为工具内部后备项，不会出现在菜单里。
+Junction 会把真实模型 ID 保存在本机 gateway 内部，只向 Claude Desktop 暴露 Claude-safe route。v1.0.19 起，Claude Desktop 模型菜单只显示用户显式映射的 Claude 槽位；`Default` 只作为工具内部后备项，不会出现在菜单里。
 
 ## 本地开发
 
 ```powershell
-git clone https://github.com/lonr-6/cc-desktop-switch.git
-cd cc-desktop-switch
+git clone https://github.com/sarang-cmd/junction.git
+cd junction
 pip install -r requirements.txt
 python main.py
 ```
@@ -136,7 +138,7 @@ Claude Desktop 会在启动时读取第三方推理配置。应用 provider 后�
 
 ### Claude Desktop 连接失败
 
-第三方 provider 默认依赖本机 gateway。请先确认 CC Desktop Switch 仍在后台运行，再检查端口占用：
+第三方 provider 默认依赖本机 gateway。请先确认 Junction 仍在后台运行，再检查端口占用：
 
 ```powershell
 netstat -ano | findstr :18081
@@ -145,13 +147,13 @@ netstat -ano | findstr :18080
 
 ### 卸载后 Claude Desktop 仍显示“由组织管理”
 
-CC Desktop Switch 使用 Claude Desktop 的策略位置写入第三方推理配置。现在 Windows 正常卸载时，只会删除带有 `ccds_managed=true` 标记、由 CCDS 自己写入的策略值；静默覆盖升级会传入 `/UPGRADE` 并保留当前 provider 配置。HKLM、MDM 或其他管理员写入的组织策略不会被删除。
+Junction 使用 Claude Desktop 的策略位置写入第三方推理配置。现在 Windows 正常卸载时，只会删除带有 `ccds_managed=true` 标记、由 CCDS 自己写入的策略值；静默覆盖升级会传入 `/UPGRADE` 并保留当前 provider 配置。HKLM、MDM 或其他管理员写入的组织策略不会被删除。
 
 v1.0.25 及更早版本建议先在应用中执行“清除桌面版配置”再卸载。若之后仍显示由组织管理，应检查机器级或组织级策略，不要直接删除无关注册表项。
 
 ### DeepSeek Max / 推理参数报错
 
-DeepSeek 官方 Anthropic 兼容端点支持 `output_config.effort=max`。CC Desktop Switch 现在只有在上游 400/422 明确指出 thinking/effort 字段并拒绝它时，才显示 Max 兼容提示；鉴权、URL、模型、上下文长度或其他参数错误会保留原始诊断信息。
+DeepSeek 官方 Anthropic 兼容端点支持 `output_config.effort=max`。Junction 现在只有在上游 400/422 明确指出 thinking/effort 字段并拒绝它时，才显示 Max 兼容提示；鉴权、URL、模型、上下文长度或其他参数错误会保留原始诊断信息。
 
 ### Claude Code attribution header
 
@@ -159,12 +161,12 @@ DeepSeek 官方 Anthropic 兼容端点支持 `output_config.effort=max`。CC Des
 
 ### GitHub Copilot 订阅账号
 
-CC Desktop Switch 不直接支持把 GitHub Copilot 订阅账号当作 provider API 使用。当前部分 Copilot 客户端已经提供自己的 BYOK / 自定义 provider 设置，可直接配置 OpenAI 兼容或本地端点；这类能力应在 Copilot 内部配置，而不是把订阅账号绕到 CC Desktop Switch。你仍可把独立的 OpenAI Chat 或 Anthropic 兼容端点作为自定义 provider 测试，但应先确认使用规则、API 格式、流式输出和工具调用兼容性。
+Junction 不直接支持把 GitHub Copilot 订阅账号当作 provider API 使用。当前部分 Copilot 客户端已经提供自己的 BYOK / 自定义 provider 设置，可直接配置 OpenAI 兼容或本地端点；这类能力应在 Copilot 内部配置，而不是把订阅账号绕到 Junction。你仍可把独立的 OpenAI Chat 或 Anthropic 兼容端点作为自定义 provider 测试，但应先确认使用规则、API 格式、流式输出和工具调用兼容性。
 
 ## Star History
 
-<a href="https://www.star-history.com/#lonr-6/cc-desktop-switch&Date">
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=lonr-6/cc-desktop-switch&type=Date">
+<a href="https://www.star-history.com/#sarang-cmd/junction&Date">
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=sarang-cmd/junction&type=Date">
 </a>
 
 ## 技术栈

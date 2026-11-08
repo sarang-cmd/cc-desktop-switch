@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f2f3f1">
+  <meta name="description" content="Draft privacy information for Junction, pending maintainer and legal review.">
+  <title>Privacy draft | Junction</title><link rel="icon" href="assets/junction-mark.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><script src="nav.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header"><div class="header-inner"><a class="brand" href="index.html"><img src="assets/junction-mark.svg" width="36" height="36" alt=""><span>Junction</span></a><button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav"><span class="sr-only">Toggle navigation</span><span class="menu-lines" aria-hidden="true"></span></button><nav id="primary-nav" class="primary-nav" aria-label="Main navigation"><a href="index.html#features">What it does</a><a href="index.html#downloads">Downloads</a><a href="https://github.com/sarang-cmd/junction" target="_blank" rel="noopener noreferrer">GitHub ↗</a></nav></div></header>
+  <main id="main" class="legal-page section-wrap">
+    <p class="eyebrow">For review · Not final</p><h1>Privacy, in plain view.</h1>
+    <p class="legal-intro"><strong>Draft status.</strong> This page is a working draft, not a finalized privacy policy. The project maintainer must confirm the responsible entity, contact details, applicable jurisdictions, retention practices, and legal wording before publication.</p>
+    <div class="legal-copy">
+      <p><strong>Last updated: November 7, 2026</strong></p>
+      <h2>What Junction does</h2>
+      <p>Junction is a desktop application for configuring Claude Desktop to use API providers selected by the user. It does not provide a user account or cloud configuration synchronization service.</p>
+      <h2>Information on your computer</h2>
+      <p>The application stores provider settings, model routes, API keys, language and theme preferences, and other settings in its local configuration directory. The default location remains <code>~/.cc-desktop-switch</code> for upgrade compatibility. <code>CCDS_CONFIG_DIR</code> can select another location. Local backups and diagnostic logs may also be created.</p>
+      <h2>Provider requests</h2>
+      <p>When you use a configured provider, Junction forwards requests to the endpoint you selected. Those requests may include prompts, model choices, and the authentication material required by that provider. The provider's terms and privacy practices apply to its processing. An optional upstream proxy routes requests through the address you configure.</p>
+      <h2>Updates and downloads</h2>
+      <p>The desktop app can check a GitHub Releases update manifest using its configured update URL. If you choose to install an update, the app downloads the release package and checks its SHA-256 value before opening the platform installer.</p>
+      <p>This static website is published through GitHub Pages. Its homepage requests the latest release details from the GitHub API so it can show the current version and link directly to published files. Downloads are served by GitHub. GitHub's own privacy terms apply to its hosting, API, and download services, including any service logs managed by GitHub.</p>
+      <h2>Diagnostics and support</h2>
+      <p>Diagnostic exports are created when requested and are not automatically sent by Junction. An export may include app and operating-system versions, provider identifiers, sanitized endpoint details, model routes, local proxy state, and redacted recent logs. Review it before sharing; details can still reveal information about your setup.</p>
+      <p>Do not include API keys, access tokens, private endpoints, or unreviewed diagnostic exports in public issues.</p>
+      <h2>Retention and requests</h2>
+      <p>Configuration, backups, and logs remain on your computer and are subject to your local storage and deletion practices. The project does not currently provide a central user account or server-side profile.</p>
+      <p><strong>Maintainer review required:</strong> confirm whether any support submissions or issue attachments are retained, identify a privacy contact, and document an appropriate request process before this draft is treated as policy.</p>
+      <h2>Contact and changes</h2>
+      <p><strong>Maintainer review required:</strong> add an official privacy contact, the responsible legal entity, and a process for announcing material changes.</p>
+      <p>Read the <a href="https://github.com/sarang-cmd/junction/blob/main/docs/PRIVACY_POLICY_DRAFT.md">source privacy draft</a> and review the project's <a href="https://github.com/sarang-cmd/junction">repository</a>.</p>
+    </div>
+    <a class="legal-back" href="index.html">← Back to Junction</a>
+  </main>
+  <footer class="site-footer section-wrap"><a class="brand footer-brand" href="index.html"><img src="assets/junction-mark.svg" width="30" height="30" alt=""><span>Junction</span></a><p class="footer-note">This privacy page is a draft for review.</p><nav aria-label="Legal links"><a href="terms.html">Terms <span class="draft-label">Draft</span></a><a href="privacy.html" aria-current="page">Privacy <span class="draft-label">Draft</span></a></nav><p class="copyright">© 2026 Junction contributors</p></footer>
+</body>
+</html>

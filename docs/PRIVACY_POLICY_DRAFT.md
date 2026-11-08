@@ -4,7 +4,7 @@
 
 ## Product and scope
 
-This draft describes the local CC Desktop Switch desktop application. It is not a policy for Anthropic, Claude Desktop, GitHub, or any API provider that you configure.
+This draft describes the local Junction desktop application. It is not a policy for Anthropic, Claude Desktop, GitHub, or any API provider that you configure.
 
 ## Data stored on your computer
 
@@ -20,6 +20,10 @@ The app does not provide a user account or cloud configuration synchronization f
 - The local admin API is protected by a runtime token and is intended for the local app UI.
 
 The project repository does not document a remote account, cloud-sync service, or analytics backend. Maintainers should re-check this statement whenever network behavior changes.
+
+## Public website
+
+The product website is a static GitHub Pages site. Its homepage requests the latest release details from the GitHub API to display the current version and create direct download links. Downloads are served by GitHub. GitHub's privacy terms govern its hosting, API, download services, and service logs; the project does not control GitHub's server-side retention.
 
 ## Diagnostics and support
 

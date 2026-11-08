@@ -1,6 +1,6 @@
 # macOS Packaging
 
-This directory owns the macOS packaging layer for CC Desktop Switch.
+This directory owns the macOS packaging layer for Junction.
 
 The shared application code stays in the repository root:
 
@@ -30,11 +30,11 @@ dist/mac/
 
 The output directory contains:
 
-- `CC Desktop Switch.app`
-- `CC-Desktop-Switch-v<version>-macOS-<arch>.pkg`
-- `CC-Desktop-Switch-v<version>-macOS-<arch>.dmg`
+- `Junction.app`
+- `Junction-v<version>-macOS-<arch>.pkg`
+- `Junction-v<version>-macOS-<arch>.dmg`
 
-The DMG keeps the standard drag-and-drop layout: the `.app` bundle plus an Applications shortcut. If a user copies that app onto an existing app at the same Applications path, Finder handles the replacement prompt. The PKG installer installs to `/Applications/CC Desktop Switch.app` and removes the previous app at that official install location before writing the new one.
+The DMG keeps the standard drag-and-drop layout: the `.app` bundle plus an Applications shortcut. If a user copies that app onto an existing app at the same Applications path, Finder handles the replacement prompt. The PKG installer installs to `/Applications/Junction.app` and removes the previous app at that official install location before writing the new one.
 
 The script sets `PYINSTALLER_CONFIG_DIR` to `.tmp/pyinstaller/` by default so PyInstaller cache writes stay inside the repository during local or sandboxed builds.
 
@@ -50,9 +50,9 @@ The in-app updater uses platform keys such as `macos-arm64` and `macos-x64` from
 
 The macOS runtime keeps the app as a normal Dock application. Closing the window hides it, and clicking the Dock icon restores the main window.
 
-Starting with v1.0.18, the stable macOS path writes the local CC Desktop Switch gateway endpoint into Claude Desktop's macOS 3P configuration. Keep CC Desktop Switch running in the background when using third-party providers. Closing the window only hides the app so the gateway can continue serving Claude Desktop through `127.0.0.1:<proxyPort>`. Quit with `Cmd+Q`, the Dock Quit command, or the app's Window menu only when the gateway should stop.
+Starting with v1.0.18, the stable macOS path writes the local Junction gateway endpoint into Claude Desktop's macOS 3P configuration. Keep Junction running in the background when using third-party providers. Closing the window only hides the app so the gateway can continue serving Claude Desktop through `127.0.0.1:<proxyPort>`. Quit with `Cmd+Q`, the Dock Quit command, or the app's Window menu only when the gateway should stop.
 
-The upstream provider URL, API key, auth scheme, extra headers, and real model names stay inside the local CC Desktop Switch configuration and proxy mapping logic. Claude Desktop receives only the local gateway URL, gateway key, and the explicitly mapped Claude-safe model routes.
+The upstream provider URL, API key, auth scheme, extra headers, and real model names stay inside the local Junction configuration and proxy mapping logic. Claude Desktop receives only the local gateway URL, gateway key, and the explicitly mapped Claude-safe model routes.
 
 ## Optional Signing
 
@@ -91,7 +91,7 @@ The script submits the DMG with `xcrun notarytool`, waits for the result, and st
 After building on macOS:
 
 ```bash
-open "dist/mac/CC Desktop Switch.app"
+open "dist/mac/Junction.app"
 ```
 
 Then verify:

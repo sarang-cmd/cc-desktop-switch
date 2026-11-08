@@ -27,10 +27,10 @@ else
 fi
 
 MAC_DIST="$ROOT/dist/mac"
-APP_PATH="$MAC_DIST/CC Desktop Switch.app"
-COLLECT_PATH="$MAC_DIST/CC-Desktop-Switch"
-PKG_PATH="$MAC_DIST/CC-Desktop-Switch-v${VERSION}-macOS-${RELEASE_ARCH}.pkg"
-DMG_PATH="$MAC_DIST/CC-Desktop-Switch-v${VERSION}-macOS-${RELEASE_ARCH}.dmg"
+APP_PATH="$MAC_DIST/Junction.app"
+COLLECT_PATH="$MAC_DIST/Junction"
+PKG_PATH="$MAC_DIST/Junction-v${VERSION}-macOS-${RELEASE_ARCH}.pkg"
+DMG_PATH="$MAC_DIST/Junction-v${VERSION}-macOS-${RELEASE_ARCH}.dmg"
 ICNS="$ROOT/macos/assets/app-icon.icns"
 PNG="$ROOT/frontend/assets/app-icon.png"
 PREPARED_PNG="$ROOT/macos/assets/app-icon-prepared.png"

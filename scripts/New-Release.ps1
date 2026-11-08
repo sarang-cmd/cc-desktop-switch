@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.0.27",
+    [string]$Version = "1.0.28",
     [string]$OutputDir = "release",
     [switch]$Build,
     [switch]$TryInstaller,
@@ -56,7 +56,7 @@ function Get-OrCreateSigningKey {
         Write-Host "Created local release signing key: $privatePath"
     }
 
-    Copy-Item -LiteralPath $publicPath -Destination (Join-Path $ReleaseDir "CC-Desktop-Switch-release-public.pem") -Force
+    Copy-Item -LiteralPath $publicPath -Destination (Join-Path $ReleaseDir "Junction-release-public.pem") -Force
     return $privatePath
 }
 
@@ -134,7 +134,7 @@ function Add-MacPlatformAssets {
 
     $macAssets = [System.Collections.Generic.List[object]]::new()
     foreach ($extension in @("pkg", "dmg")) {
-        $assetPath = Join-Path $MacDir "CC-Desktop-Switch-v$Version-macOS-$Arch.$extension"
+        $assetPath = Join-Path $MacDir "Junction-v$Version-macOS-$Arch.$extension"
         if (Test-Path -LiteralPath $assetPath) {
             $releaseAssetPath = Join-Path $ReleaseDir (Split-Path -Leaf $assetPath)
             Copy-Item -LiteralPath $assetPath -Destination $releaseAssetPath -Force
@@ -204,16 +204,19 @@ if ([System.IO.Path]::IsPathRooted($OutputDir)) {
     $releaseDir = Join-Path $root $OutputDir
 }
 $distDir = Join-Path $root "dist"
-$folderDist = Join-Path $distDir "CC-Desktop-Switch"
-$oneFileExe = Join-Path $distDir "CC-Desktop-Switch.exe"
-$setupExe = Join-Path $root "CC-Desktop-Switch-Setup-$Version.exe"
+$folderDist = Join-Path $distDir "Junction"
+$oneFileExe = Join-Path $distDir "Junction.exe"
+$setupExe = Join-Path $root "Junction-Setup-$Version.exe"
 
 Set-Location $root
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 foreach ($pattern in @(
+    "Junction-v*-Windows-*",
+    "Junction-v*-macOS-*",
     "CC-Desktop-Switch-v*-Windows-*",
     "CC-Desktop-Switch-v*-macOS-*",
     "CC-Desktop-Switch-release-public.pem",
+    "Junction-release-public.pem",
     "latest.json",
     "latest.json.sha256",
     "latest.json.sig"
@@ -242,7 +245,7 @@ if (Test-Path -LiteralPath $licensePath) {
     Copy-Item -LiteralPath $licensePath -Destination (Join-Path $folderDist "LICENSE.txt") -Force
 }
 
-$folderExe = Join-Path $folderDist "CC-Desktop-Switch.exe"
+$folderExe = Join-Path $folderDist "Junction.exe"
 Invoke-OptionalCodeSigning -Files @($folderExe, $oneFileExe)
 
 if ($TryInstaller) {
@@ -259,18 +262,18 @@ if ($TryInstaller) {
 
 $windowsAssetPaths = [System.Collections.Generic.List[string]]::new()
 
-$portableZip = Join-Path $releaseDir "CC-Desktop-Switch-v$Version-Windows-Portable.zip"
+$portableZip = Join-Path $releaseDir "Junction-v$Version-Windows-Portable.zip"
 if (Test-Path -LiteralPath $portableZip) { Remove-Item -LiteralPath $portableZip -Force }
 Compress-Archive -Path (Join-Path $folderDist "*") -DestinationPath $portableZip -Force
 $windowsAssetPaths.Add($portableZip) | Out-Null
 
-$releaseExe = Join-Path $releaseDir "CC-Desktop-Switch-v$Version-Windows-x64.exe"
+$releaseExe = Join-Path $releaseDir "Junction-v$Version-Windows-x64.exe"
 Copy-Item -LiteralPath $oneFileExe -Destination $releaseExe -Force
 $windowsAssetPaths.Add($releaseExe) | Out-Null
 
 $releaseSetup = $null
 if (Test-Path -LiteralPath $setupExe) {
-    $releaseSetup = Join-Path $releaseDir "CC-Desktop-Switch-v$Version-Windows-Setup.exe"
+    $releaseSetup = Join-Path $releaseDir "Junction-v$Version-Windows-Setup.exe"
     Copy-Item -LiteralPath $setupExe -Destination $releaseSetup -Force
     $windowsAssetPaths.Add($releaseSetup) | Out-Null
 }
@@ -301,16 +304,16 @@ Add-MacPlatformAssets -Platforms $platforms -MacDir $macDistDir -ReleaseDir $rel
 Add-MacPlatformAssets -Platforms $platforms -MacDir $macDistDir -ReleaseDir $releaseDir -Arch "x64" -Version $Version -PrivateKeyPath $privateKey
 
 $latest = [ordered]@{
-    name = "CC Desktop Switch"
+    name = "Junction"
     version = $Version
     pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    notes = "Windows release for CC Desktop Switch v$Version."
+    notes = "Windows release for Junction v$Version."
     update_protocol = 1
     minimum_supported_version = "1.0.0"
     platforms = $platforms
     signature = [ordered]@{
         algorithm = "RSA-CSP-BLOB-SHA256"
-        public_key = "CC-Desktop-Switch-release-public.pem"
+        public_key = "Junction-release-public.pem"
         format = "base64 raw signature over file bytes"
     }
 }

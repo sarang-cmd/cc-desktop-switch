@@ -4,7 +4,7 @@
 
 ## Product
 
-CC Desktop Switch is a desktop application for configuring Claude Desktop to use user-selected API providers. The application does not supply provider accounts, API credits, or third-party services.
+Junction is a desktop application for configuring Claude Desktop to use user-selected API providers. The application does not supply provider accounts, API credits, or third-party services.
 
 ## Provider services and credentials
 

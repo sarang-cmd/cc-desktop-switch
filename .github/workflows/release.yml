@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version without v prefix, for example 1.0.27"
+        description: "Release version without v prefix, for example 1.0.28"
         required: true
         type: string
       dry_run:
@@ -143,8 +143,8 @@ jobs:
           }
 
           $required = @(
-            "release-staging\CC-Desktop-Switch-v$env:RELEASE_VERSION-Windows-x64.exe",
-            "release-staging\CC-Desktop-Switch-v$env:RELEASE_VERSION-Windows-Portable.zip"
+            "release-staging\Junction-v$env:RELEASE_VERSION-Windows-x64.exe",
+            "release-staging\Junction-v$env:RELEASE_VERSION-Windows-Portable.zip"
           )
           foreach ($path in $required) {
             if (-not (Test-Path -LiteralPath $path)) {
@@ -195,7 +195,7 @@ jobs:
       - name: Smoke test macOS app bundle
         shell: bash
         run: |
-          app_exe="dist/mac/CC Desktop Switch.app/Contents/MacOS/CC-Desktop-Switch"
+          app_exe="dist/mac/Junction.app/Contents/MacOS/Junction"
           if [[ ! -x "$app_exe" ]]; then
             echo "App executable not found: $app_exe" >&2
             exit 1
@@ -228,8 +228,8 @@ jobs:
       - name: Verify macOS packages
         shell: bash
         run: |
-          pkg="dist/mac/CC-Desktop-Switch-v${RELEASE_VERSION}-macOS-arm64.pkg"
-          dmg="dist/mac/CC-Desktop-Switch-v${RELEASE_VERSION}-macOS-arm64.dmg"
+          pkg="dist/mac/Junction-v${RELEASE_VERSION}-macOS-arm64.pkg"
+          dmg="dist/mac/Junction-v${RELEASE_VERSION}-macOS-arm64.dmg"
 
           test -f "$pkg"
           test -f "$dmg"
@@ -241,8 +241,8 @@ jobs:
         with:
           name: release-macos-arm64
           path: |
-            dist/mac/CC-Desktop-Switch-v${{ needs.prepare.outputs.version }}-macOS-arm64.pkg
-            dist/mac/CC-Desktop-Switch-v${{ needs.prepare.outputs.version }}-macOS-arm64.dmg
+            dist/mac/Junction-v${{ needs.prepare.outputs.version }}-macOS-arm64.pkg
+            dist/mac/Junction-v${{ needs.prepare.outputs.version }}-macOS-arm64.dmg
           if-no-files-found: error
           retention-days: 7
 
@@ -280,7 +280,7 @@ jobs:
       - name: Smoke test macOS app bundle
         shell: bash
         run: |
-          app_exe="dist/mac/CC Desktop Switch.app/Contents/MacOS/CC-Desktop-Switch"
+          app_exe="dist/mac/Junction.app/Contents/MacOS/Junction"
           if [[ ! -x "$app_exe" ]]; then
             echo "App executable not found: $app_exe" >&2
             exit 1
@@ -313,8 +313,8 @@ jobs:
       - name: Verify macOS packages
         shell: bash
         run: |
-          pkg="dist/mac/CC-Desktop-Switch-v${RELEASE_VERSION}-macOS-x64.pkg"
-          dmg="dist/mac/CC-Desktop-Switch-v${RELEASE_VERSION}-macOS-x64.dmg"
+          pkg="dist/mac/Junction-v${RELEASE_VERSION}-macOS-x64.pkg"
+          dmg="dist/mac/Junction-v${RELEASE_VERSION}-macOS-x64.dmg"
 
           test -f "$pkg"
           test -f "$dmg"
@@ -326,8 +326,8 @@ jobs:
         with:
           name: release-macos-x64
           path: |
-            dist/mac/CC-Desktop-Switch-v${{ needs.prepare.outputs.version }}-macOS-x64.pkg
-            dist/mac/CC-Desktop-Switch-v${{ needs.prepare.outputs.version }}-macOS-x64.dmg
+            dist/mac/Junction-v${{ needs.prepare.outputs.version }}-macOS-x64.pkg
+            dist/mac/Junction-v${{ needs.prepare.outputs.version }}-macOS-x64.dmg
           if-no-files-found: error
           retention-days: 7
 
@@ -380,10 +380,10 @@ jobs:
       - name: Verify release signatures
         shell: powershell
         run: |
-          $publicKey = "release-staging\CC-Desktop-Switch-release-public.pem"
+          $publicKey = "release-staging\Junction-release-public.pem"
           $files = Get-ChildItem -LiteralPath "release-staging" -File |
             Where-Object {
-              $_.Name -ne "CC-Desktop-Switch-release-public.pem" -and
+              $_.Name -ne "Junction-release-public.pem" -and
               $_.Name -notlike "*.sha256" -and
               $_.Name -notlike "*.sig"
             }
@@ -417,7 +417,7 @@ jobs:
           if (Test-Path -LiteralPath $notesPath) {
             Copy-Item -LiteralPath $notesPath -Destination $notesFile -Force
           } else {
-            Set-Content -LiteralPath $notesFile -Value "Release for CC Desktop Switch v$env:RELEASE_VERSION." -Encoding utf8
+            Set-Content -LiteralPath $notesFile -Value "Release for Junction v$env:RELEASE_VERSION." -Encoding utf8
           }
 
           $oldEAP = $ErrorActionPreference
@@ -430,9 +430,9 @@ jobs:
             if ($isDraft.Trim() -ne "true") {
               throw "Release $tag already exists and is not a draft."
             }
-            Invoke-Gh release edit $tag --repo $env:GITHUB_REPOSITORY --title "CC Desktop Switch $tag" --notes-file $notesFile --verify-tag
+            Invoke-Gh release edit $tag --repo $env:GITHUB_REPOSITORY --title "Junction $tag" --notes-file $notesFile --verify-tag
           } else {
-            Invoke-Gh release create $tag --repo $env:GITHUB_REPOSITORY --draft --title "CC Desktop Switch $tag" --notes-file $notesFile --verify-tag
+            Invoke-Gh release create $tag --repo $env:GITHUB_REPOSITORY --draft --title "Junction $tag" --notes-file $notesFile --verify-tag
           }
 
           $ErrorActionPreference = "SilentlyContinue"

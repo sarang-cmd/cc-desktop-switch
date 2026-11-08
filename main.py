@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CC Desktop Switch - Application entrypoint."""
+"""Junction - Application entrypoint."""
 
 import argparse
 import ctypes
@@ -29,8 +29,8 @@ from backend.main import (
 )
 
 
-APP_NAME = "CC Desktop Switch"
-APP_VERSION = "1.0.27"
+APP_NAME = "Junction"
+APP_VERSION = "1.0.28"
 TRAY_OPEN_LABEL = i18n.get_text("tray.open", "en")
 TRAY_QUIT_LABEL = i18n.get_text("tray.quit", "en")
 _macos_app_delegate = None
@@ -41,6 +41,7 @@ MB_OK = 0x00000000
 MB_ICONINFORMATION = 0x00000040
 MB_SETFOREGROUND = 0x00010000
 ERROR_ALREADY_EXISTS = 183
+# Retain the old mutex identity so Junction cannot run beside an already-open legacy instance.
 SINGLE_INSTANCE_MUTEX_NAME = "Local\\CCDesktopSwitch.SingleInstance"
 
 
@@ -358,7 +359,7 @@ def _install_macos_reopen_handler(window, controller):
 
             menu = AppKit.NSMenu.alloc().init()
             show_item = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-                "Show CC Desktop Switch",
+                "Show Junction",
                 "showApp:",
                 "",
             )
@@ -366,7 +367,7 @@ def _install_macos_reopen_handler(window, controller):
             menu.addItem_(show_item)
             menu.addItem_(AppKit.NSMenuItem.separatorItem())
             quit_item = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-                "Quit CC Desktop Switch",
+                "Quit Junction",
                 "quitApp:",
                 "",
             )
@@ -636,9 +637,9 @@ def open_desktop_window(url: str) -> bool:
 
             menu = [
                 Menu("Window", [
-                    MenuAction("Show CC Desktop Switch", tray.show_window),
+                    MenuAction("Show Junction", tray.show_window),
                     MenuSeparator(),
-                    MenuAction("Quit CC Desktop Switch", tray.quit_app),
+                    MenuAction("Quit Junction", tray.quit_app),
                 ]),
             ]
 
