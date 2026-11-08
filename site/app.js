@@ -1,5 +1,5 @@
 (() => {
-  const repo = "sarang-cmd/cc-desktop-switch";
+  const repo = "sarang-cmd/junction";
   const releaseUrl = `https://github.com/${repo}/releases/latest`;
   const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
   const patterns = {

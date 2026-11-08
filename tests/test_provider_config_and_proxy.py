@@ -2767,7 +2767,7 @@ class ReleaseManifestTests(unittest.TestCase):
                 "-StagingDir",
                 str(self.staging),
                 "-Repository",
-                "sarang-cmd/cc-desktop-switch",
+                "sarang-cmd/junction",
                 "-KeyDir",
                 str(self.key_dir),
             ],

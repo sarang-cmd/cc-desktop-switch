@@ -9,7 +9,7 @@ from backend.proxy import create_proxy_app
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_VERSION = "1.0.28"
-EXPECTED_REPOSITORY = "sarang-cmd/cc-desktop-switch"
+EXPECTED_REPOSITORY = "sarang-cmd/junction"
 
 
 class ReleaseVersionSyncTests(unittest.TestCase):
@@ -42,13 +42,17 @@ class ReleaseVersionSyncTests(unittest.TestCase):
             self.assertIn(EXPECTED_REPOSITORY, text, relative_path)
             self.assertNotIn("lonr-6/cc-desktop-switch", text, relative_path)
 
-    def test_known_upstream_update_url_migrates_but_custom_feed_is_preserved(self):
-        old_upstream = "https://github.com/lonr-6/cc-desktop-switch/releases/latest/download/latest.json"
-        migrated = cfg.normalize_config({"settings": {"updateUrl": old_upstream}})
+    def test_legacy_project_update_urls_migrate_but_custom_feed_is_preserved(self):
+        old_urls = (
+            "https://github.com/lonr-6/cc-desktop-switch/releases/latest/download/latest.json",
+            "https://github.com/sarang-cmd/cc-desktop-switch/releases/latest/download/latest.json",
+        )
+        for old_url in old_urls:
+            migrated = cfg.normalize_config({"settings": {"updateUrl": old_url}})
+            self.assertEqual(migrated["settings"]["updateUrl"], cfg.DEFAULT_UPDATE_URL)
+
         custom_url = "https://updates.example.test/junction/latest.json"
         custom = cfg.normalize_config({"settings": {"updateUrl": custom_url}})
-
-        self.assertEqual(migrated["settings"]["updateUrl"], cfg.DEFAULT_UPDATE_URL)
         self.assertEqual(custom["settings"]["updateUrl"], custom_url)
 
     def test_upgrade_compatibility_identifiers_remain_stable(self):

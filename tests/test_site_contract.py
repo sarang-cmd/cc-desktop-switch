@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
-REPOSITORY = "sarang-cmd/cc-desktop-switch"
+REPOSITORY = "sarang-cmd/junction"
 
 
 class SiteContractTests(unittest.TestCase):

@@ -2,7 +2,7 @@
 
 **Manage Claude Desktop providers and model routes from one local app.**
 
-Product website: <https://sarang-cmd.github.io/cc-desktop-switch/>
+Product website: <https://sarang-cmd.github.io/junction/>
 
 
 Junction helps Windows and macOS users connect Claude Desktop to Anthropic-compatible and OpenAI-compatible API providers. Choose a provider, set the model routes you want, then apply the configuration to Claude Desktop.
@@ -49,7 +49,7 @@ The Xiaomi MiMo Token Plan preset includes selectable regional clusters. You sti
 
 ## Download v1.0.27
 
-[Open the latest release page](https://github.com/sarang-cmd/cc-desktop-switch/releases/latest) to download an installer or portable package. The currently published v1.0.27 assets retain their previous `CC-Desktop-Switch` filenames; Junction builds use the new product name.
+[Open the latest release page](https://github.com/sarang-cmd/junction/releases/latest) to download an installer or portable package. The currently published v1.0.27 assets retain their previous `CC-Desktop-Switch` filenames; Junction builds use the new product name.
 
 - **Windows x64 installer:** `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`
 - **Windows x64 portable:** `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`
@@ -117,8 +117,8 @@ Check the provider's current model ID and API compatibility. Keep the exact diag
 Requirements: Python 3.11 or later and Node.js for JavaScript syntax checks. Windows packaging also uses PyInstaller and NSIS. macOS packages are built by the scripts under `macos/` on the matching macOS architecture.
 
 ```bash
-git clone https://github.com/sarang-cmd/cc-desktop-switch.git
-cd cc-desktop-switch
+git clone https://github.com/sarang-cmd/junction.git
+cd junction
 python -m pip install -r requirements.txt
 python main.py
 ```

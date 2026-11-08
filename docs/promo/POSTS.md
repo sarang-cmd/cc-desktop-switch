@@ -7,13 +7,13 @@
 项目链接：
 
 ```text
-https://github.com/sarang-cmd/cc-desktop-switch
+https://github.com/sarang-cmd/junction
 ```
 
 Release：
 
 ```text
-https://github.com/sarang-cmd/cc-desktop-switch/releases/latest
+https://github.com/sarang-cmd/junction/releases/latest
 ```
 
 配图：
@@ -47,7 +47,7 @@ https://github.com/sarang-cmd/cc-desktop-switch/releases/latest
 
 目前 v1.0.9 已经发到 GitHub：
 
-https://github.com/sarang-cmd/cc-desktop-switch
+https://github.com/sarang-cmd/junction
 
 现在更适合愿意自己折腾的用户：
 
@@ -82,7 +82,7 @@ What it does:
 It is not an official Anthropic tool, and it does not include a Windows Authenticode signature yet.
 
 Repo:
-https://github.com/sarang-cmd/cc-desktop-switch
+https://github.com/sarang-cmd/junction
 
 ### Thread
 
@@ -91,7 +91,7 @@ https://github.com/sarang-cmd/cc-desktop-switch
 It helps configure Claude Desktop for third-party API providers through a local proxy.
 
 Repo:
-https://github.com/sarang-cmd/cc-desktop-switch
+https://github.com/sarang-cmd/junction
 
 2/ The flow is simple:
 
@@ -136,13 +136,13 @@ Use a test API key first. Do not paste real keys into issues, screenshots, or co
 项目地址：
 
 ```text
-https://github.com/sarang-cmd/cc-desktop-switch
+https://github.com/sarang-cmd/junction
 ```
 
 Release：
 
 ```text
-https://github.com/sarang-cmd/cc-desktop-switch/releases/latest
+https://github.com/sarang-cmd/junction/releases/latest
 ```
 
 它解决的问题比较具体：Claude Desktop 的第三方推理配置能用，但手动流程对普通用户不太顺。这个工具把 provider 管理、本机转发、模型映射和 Claude 桌面版配置写入放到一个本地桌面界面里。

@@ -8,13 +8,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sarang-cmd/cc-desktop-switch/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/sarang-cmd/cc-desktop-switch?style=social"></a>
-  <a href="LICENSE.txt"><img alt="License" src="https://img.shields.io/github/license/sarang-cmd/cc-desktop-switch"></a>
+  <a href="https://github.com/sarang-cmd/junction/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/sarang-cmd/junction?style=social"></a>
+  <a href="LICENSE.txt"><img alt="License" src="https://img.shields.io/github/license/sarang-cmd/junction"></a>
   <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-blue?logo=python"></a>
-  <a href="https://github.com/sarang-cmd/cc-desktop-switch/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sarang-cmd/cc-desktop-switch/total?label=downloads"></a>
+  <a href="https://github.com/sarang-cmd/junction/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sarang-cmd/junction/total?label=downloads"></a>
 </p>
 
-产品网站：<https://sarang-cmd.github.io/cc-desktop-switch/>
+产品网站：<https://sarang-cmd.github.io/junction/>
 
 Junction 是一个面向 Claude Desktop 官方桌面客户端的轻量配置工具。它可以用桌面界面管理 DeepSeek、Kimi、智谱 GLM、阿里云百炼、小米 MiMo 等第三方 Anthropic 兼容 API 提供商，并一键写入 Claude Desktop 的第三方推理配置。
 
@@ -67,7 +67,7 @@ v1.0.18 起，Claude Desktop 默认会连接 Junction 的本机 gateway：`127.0
 最新版本在 GitHub Releases：
 
 ```text
-https://github.com/sarang-cmd/cc-desktop-switch/releases/latest
+https://github.com/sarang-cmd/junction/releases/latest
 ```
 
 推荐下载：
@@ -108,8 +108,8 @@ Junction 会把真实模型 ID 保存在本机 gateway 内部，只向 Claude De
 ## 本地开发
 
 ```powershell
-git clone https://github.com/sarang-cmd/cc-desktop-switch.git
-cd cc-desktop-switch
+git clone https://github.com/sarang-cmd/junction.git
+cd junction
 pip install -r requirements.txt
 python main.py
 ```
@@ -165,8 +165,8 @@ Junction 不直接支持把 GitHub Copilot 订阅账号当作 provider API 使�
 
 ## Star History
 
-<a href="https://www.star-history.com/#sarang-cmd/cc-desktop-switch&Date">
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=sarang-cmd/cc-desktop-switch&type=Date">
+<a href="https://www.star-history.com/#sarang-cmd/junction&Date">
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=sarang-cmd/junction&type=Date">
 </a>
 
 ## 技术栈

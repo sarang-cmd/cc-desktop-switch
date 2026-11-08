@@ -25,9 +25,10 @@ def _resolve_config_paths() -> tuple[str, str, str]:
 
 
 CONFIG_DIR, CONFIG_FILE, BACKUP_DIR = _resolve_config_paths()
-DEFAULT_UPDATE_URL = "https://github.com/sarang-cmd/cc-desktop-switch/releases/latest/download/latest.json"
+DEFAULT_UPDATE_URL = "https://github.com/sarang-cmd/junction/releases/latest/download/latest.json"
 LEGACY_UPDATE_URLS = {
     "https://github.com/lonr-6/cc-desktop-switch/releases/latest/download/latest.json",
+    "https://github.com/sarang-cmd/cc-desktop-switch/releases/latest/download/latest.json",
 }
 
 DEFAULT_CONFIG = {
@@ -147,7 +148,7 @@ def normalize_config(config: dict) -> dict:
     imported_settings = source.get("settings", {})
     if isinstance(imported_settings, dict):
         settings.update(imported_settings)
-    # Migrate only the known upstream default. User-specified update feeds remain untouched.
+    # Migrate known pre-rebrand project feeds while leaving custom user feeds untouched.
     if str(settings.get("updateUrl") or "").strip() in LEGACY_UPDATE_URLS:
         settings["updateUrl"] = DEFAULT_UPDATE_URL
     normalized["settings"] = settings
