@@ -4,7 +4,7 @@
 
 CC Desktop Switch helps Windows and macOS users connect Claude Desktop to Anthropic-compatible and OpenAI-compatible API providers. Choose a provider, set the model routes you want, then apply the configuration to Claude Desktop.
 
-The app includes 22 built-in provider presets, a model-routing patchboard, connection checks, and an optional local forwarding gateway. Your API keys and provider configuration are kept in your local app configuration. You supply and pay for your own provider access.
+The app includes 22 built-in provider presets, bundled provider logos, a model-routing patchboard, connection checks, and an optional local forwarding gateway. Logos are stored with the app and work offline; custom or unlisted providers keep a readable icon fallback. Your API keys and provider configuration are kept in your local app configuration. You supply and pay for your own provider access.
 
 The interface is available in English and Simplified Chinese. New installations start in English regardless of the operating system language. Your language choice is saved and restored when the app next starts.
 
@@ -44,16 +44,16 @@ Presets provide a starting point for the endpoint, authentication scheme, API fo
 
 The Xiaomi MiMo Token Plan preset includes selectable regional clusters. You still need a valid account and API key for the selected service. Availability, model names, pricing, and terms are controlled by each provider.
 
-## Download v1.0.26
+## Download v1.0.27
 
-[Open the v1.0.26 release page](https://github.com/sarang-cmd/cc-desktop-switch/releases/tag/v1.0.26) to download an installer or portable package.
+[Open the v1.0.27 release page](https://github.com/sarang-cmd/cc-desktop-switch/releases/tag/v1.0.27) to download an installer or portable package.
 
-- **Windows x64 installer:** `CC-Desktop-Switch-v1.0.26-Windows-Setup.exe`
-- **Windows x64 portable:** `CC-Desktop-Switch-v1.0.26-Windows-Portable.zip`
-- **macOS Apple silicon installer:** `CC-Desktop-Switch-v1.0.26-macOS-arm64.pkg`
-- **macOS Apple silicon disk image:** `CC-Desktop-Switch-v1.0.26-macOS-arm64.dmg`
-- **macOS Intel installer:** `CC-Desktop-Switch-v1.0.26-macOS-x64.pkg`
-- **macOS Intel disk image:** `CC-Desktop-Switch-v1.0.26-macOS-x64.dmg`
+- **Windows x64 installer:** `CC-Desktop-Switch-v1.0.27-Windows-Setup.exe`
+- **Windows x64 portable:** `CC-Desktop-Switch-v1.0.27-Windows-Portable.zip`
+- **macOS Apple silicon installer:** `CC-Desktop-Switch-v1.0.27-macOS-arm64.pkg`
+- **macOS Apple silicon disk image:** `CC-Desktop-Switch-v1.0.27-macOS-arm64.dmg`
+- **macOS Intel installer:** `CC-Desktop-Switch-v1.0.27-macOS-x64.pkg`
+- **macOS Intel disk image:** `CC-Desktop-Switch-v1.0.27-macOS-x64.dmg`
 
 Each release includes SHA-256 files, detached signatures, the release public key, and an update manifest. Windows executables are not Authenticode-signed, so Windows may show an unknown publisher warning. Verify downloaded files against the included checksums and signatures if needed.
 

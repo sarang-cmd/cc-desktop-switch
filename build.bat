@@ -5,7 +5,7 @@ chcp 65001 >nul
 :MENU
 cls
 echo ========================================
-echo    CC Desktop Switch v1.0.26 - Build Tool
+echo    CC Desktop Switch v1.0.27 - Build Tool
 echo ========================================
 echo.
 echo  Select a packaging mode:
