@@ -3882,13 +3882,35 @@ button, a, select, input, .preset-item, .route-tab {
 }
 @media (max-width: 720px) {
   body { height: 100dvh; }
-  .app-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; min-height: 0; padding: 10px 14px; }
-  .header-actions-left { order: 3; width: 100%; }
-  .header-actions-left .btn { width: auto; padding-inline: 10px; }
+  .app-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "actions" "navigation" "utility";
+    gap: 9px;
+    min-height: 0;
+    padding: 10px 14px;
+  }
+  .header-actions { grid-area: actions; justify-self: end; margin: 0; gap: 7px; }
+  .route-tabs {
+    grid-area: navigation;
+    position: static;
+    display: flex;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 5px;
+    transform: none;
+  }
+  .header-actions-left {
+    grid-area: utility;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+  .header-actions-left .btn { width: 100%; min-width: 0; justify-content: center; padding: 7px 8px; white-space: normal; line-height: 1.2; }
   .header-actions-left .btn span { display: inline; }
-  .route-tabs { position: static; order: 2; flex: 1 0 100%; justify-content: space-around; max-width: none; margin: 0; padding: 5px; transform: none; }
   .route-tab { flex: 1; min-width: 36px; padding-inline: 5px; }
-  .header-actions { order: 1; margin-left: auto; gap: 7px; }
   .header-divider { display: none; }
   .app-main { padding: 20px 14px 34px; }
   .panel, .form-panel, .preset-panel { padding: 15px; }
